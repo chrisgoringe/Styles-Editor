@@ -29,8 +29,5 @@ The `Save Styles` button will save the styles, and refresh the styles dropdown m
 ### Add notes
 You can use the notes column for any notes you want to make.
 
-## To Do
-
-- auto refresh
-- copy from txt or img pane
-- send to tx or img pane
+### Filter view
+Type into the filter text box to only show rows matching the text string

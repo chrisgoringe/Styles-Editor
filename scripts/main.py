@@ -43,17 +43,20 @@ class StyleEditor:
   def on_ui_tabs(cls):
     with gr.Blocks(analytics_enabled=False) as style_editor:
       with gr.Row():
-        load = gr.Button(value="Reload Styles", elem_id="style_editor_load")
-        save = gr.Button(value="Save Styles", elem_id="style_editor_save")
+        cls.load_button = gr.Button(value="Reload Styles", elem_id="style_editor_load")
+        cls.save_button = gr.Button(value="Save Styles", elem_id="style_editor_save")
+      with gr.Row():
+        cls.filter_box = gr.Textbox(max_lines=1, interactive=True, placeholder="filter", elem_id="style_editor_filter", show_label=False)
       with gr.Row():
         cls.dataeditor = gr.Dataframe(value=cls.load_styles, label="Styles", 
                                       col_count=(len(StyleEditor.cols),'fixed'), 
-                                      wrap=True, max_rows=10,
+                                      wrap=True, max_rows=1000,
                                       show_label=False, interactive=True, 
                                       elem_id="style_editor_grid")
 
-      load.click(fn=StyleEditor.load_styles, outputs=cls.dataeditor)
-      save.click(fn=StyleEditor.save_styles, inputs=cls.dataeditor, _js="refresh_style_list")
+      cls.load_button.click(fn=StyleEditor.load_styles, outputs=cls.dataeditor)
+      cls.save_button.click(fn=StyleEditor.save_styles, inputs=cls.dataeditor, _js="refresh_style_list")
+      cls.filter_box.change(fn=None, _js="filter_style_list")
 
     return [(style_editor, "Style Editor", "style_editor")]
 
