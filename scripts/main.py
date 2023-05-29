@@ -26,7 +26,10 @@ class StyleEditor:
   def load_styles(cls):
     # bad lines are probably ones that had no 'notes', so append a ''
     # skip the first line (which has headers) and use our own
-    cls.dataframe = pd.read_csv("styles.csv", header=None, names=cls.cols, on_bad_lines=lambda x : x.append(''), engine='python', skiprows=[0])
+    try:
+      cls.dataframe = pd.read_csv("styles.csv", header=None, names=cls.cols, on_bad_lines=lambda x : x.append(''), engine='python', skiprows=[0])
+    except:
+      cls.dataframe = pd.DataFrame(columns=cls.cols)
     return cls.dataframe
 
   @classmethod
@@ -35,7 +38,6 @@ class StyleEditor:
       return
     dts = data_to_save.drop(index=[i for (i, row) in data_to_save.iterrows() if row[0]==''])
     dts.to_csv("styles.csv", columns=cls.cols, index=False)
-    #prompt_styles.reload()
 
   @classmethod
   def on_ui_tabs(cls):
