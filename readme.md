@@ -11,7 +11,7 @@ Or paste that URL into the manual install box.
 ## Usage
 
 ### Load and view styles
-Click on the `Style Editor` tab. Then click `Load Styles`.
+Click on the `Style Editor` tab. If you need to reload the styles for any reason,  click `Reload Styles`.
 
 ### Edit styles
 Click on any box and it will be highlighted. You can then type and it will replace what was there.
@@ -30,4 +30,10 @@ The `Save Styles` button will save the styles, and refresh the styles dropdown m
 You can use the notes column for any notes you want to make.
 
 ### Filter view
-Type into the filter text box to only show rows matching the text string
+Type into the filter text box to only show rows matching the text string. Matches from any of the columns.
+
+## To Do (maybe)
+
+- duplicate style
+- search and replace
+- reorder (permanently)
