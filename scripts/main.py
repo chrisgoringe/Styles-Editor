@@ -30,7 +30,6 @@ class StyleEditor:
       cls.dataframe = pd.read_csv("styles.csv", header=None, names=cls.cols, on_bad_lines=lambda x : x.append(''), engine='python', skiprows=[0])
     except:
       cls.dataframe = pd.DataFrame(columns=cls.cols)
-    cls.dataframe.insert(loc=0, column=' ', value=[i for i in range(1,cls.dataframe.shape[0]+1)])
     return cls.dataframe
 
   @classmethod
