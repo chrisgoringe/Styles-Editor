@@ -32,8 +32,12 @@ You can use the notes column for any notes you want to make.
 ### Filter view
 Type into the filter text box to only show rows matching the text string. Matches from any of the columns.
 
-## To Do (maybe)
+### Sorting (experimental)
+The "index" column is automatically generated whenever you save or load. If you edit the value, you can then sort the list by index (using the arrow in the header). When you save, the current display order is the order for saving, and new indices are created.
 
+## To Do (definitely)
+- read and save style from user specified location (don't assume default)
+
+## To Do (maybe)
 - duplicate style
 - search and replace
-- reorder (permanently)

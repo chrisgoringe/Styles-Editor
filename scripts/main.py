@@ -30,13 +30,15 @@ class StyleEditor:
       cls.dataframe = pd.read_csv("styles.csv", header=None, names=cls.cols, on_bad_lines=lambda x : x.append(''), engine='python', skiprows=[0])
     except:
       cls.dataframe = pd.DataFrame(columns=cls.cols)
+    if cls.dataframe.shape[1]==4:
+      cls.dataframe.insert(loc=0, column="index", value=[i for i in range(1,cls.dataframe.shape[0]+1)])
     return cls.dataframe
 
   @classmethod
   def save_styles(cls, data_to_save:pd.DataFrame):
     if cls.dataframe is None:
       return
-    dts = data_to_save.drop(index=[i for (i, row) in data_to_save.iterrows() if row[0]==''])
+    dts = data_to_save.drop(index=[i for (i, row) in data_to_save.iterrows() if row[1]==''])
     dts.to_csv("styles.csv", columns=cls.cols, index=False)
 
   @classmethod
@@ -49,7 +51,7 @@ class StyleEditor:
         cls.filter_box = gr.Textbox(max_lines=1, interactive=True, placeholder="filter", elem_id="style_editor_filter", show_label=False)
       with gr.Row():
         cls.dataeditor = gr.Dataframe(value=cls.load_styles, label="Styles", 
-                                      col_count=(len(StyleEditor.cols),'fixed'), 
+                                      col_count=(len(StyleEditor.cols)+1,'fixed'), 
                                       wrap=True, max_rows=1000,
                                       show_label=False, interactive=True, 
                                       elem_id="style_editor_grid")
