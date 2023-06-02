@@ -7,9 +7,11 @@ function refresh_style_list(x) {
     return x;
 }
 
-function filter_style_list(filter_text, type) {
+function filter_style_list() {
+    filter = document.getElementById('style_editor_filter').firstElementChild.lastElementChild;
+    filter_text = filter.value;
+    type = document.getElementById('style_editor_filter_select').lastChild.lastChild.firstChild.firstElementChild.firstChild.value;
     if (type=="regex") { 
-        filter = document.getElementById('style_editor_filter').firstElementChild.lastElementChild;
         try {
             re = new RegExp(filter_text);
             filter.style.color="white";
@@ -32,5 +34,4 @@ function filter_style_list(filter_text, type) {
         if (vis || header) { row.style.display = '' } else { row.style.display='none' }
         header = false;
     }
-    return (filter_text, type);
 }
