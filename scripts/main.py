@@ -1,7 +1,7 @@
 import gradio as gr
 import modules.scripts as scripts
 from modules import script_callbacks
-from modules.shared import prompt_styles
+from modules.shared import opts
 import pandas as pd
 
 class Script(scripts.Script):
@@ -21,13 +21,14 @@ class StyleEditor:
   cols = ['name','prompt','negative_prompt', 'notes']
   dataframe = None
   dataeditor = None
+  styles_filename = getattr(opts, 'styles_dir', None)
 
   @classmethod
   def load_styles(cls):
     # bad lines are probably ones that had no 'notes', so append a ''
     # skip the first line (which has headers) and use our own
     try:
-      cls.dataframe = pd.read_csv("styles.csv", header=None, names=cls.cols, on_bad_lines=lambda x : x.append(''), engine='python', skiprows=[0])
+      cls.dataframe = pd.read_csv(cls.styles_filename, header=None, names=cls.cols, on_bad_lines=lambda x : x.append(''), engine='python', skiprows=[0])
     except:
       cls.dataframe = pd.DataFrame(columns=cls.cols)
     if cls.dataframe.shape[1]==4:
@@ -39,7 +40,7 @@ class StyleEditor:
     if cls.dataframe is None:
       return
     dts = data_to_save.drop(index=[i for (i, row) in data_to_save.iterrows() if row[1]==''])
-    dts.to_csv("styles.csv", columns=cls.cols, index=False)
+    dts.to_csv(cls.styles_filename, columns=cls.cols, index=False)
     return gr.Button.update(interactive=False)
   
   @classmethod
