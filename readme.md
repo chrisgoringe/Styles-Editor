@@ -37,7 +37,7 @@ If filtering by regex, if an invalid regex is entered it will be highlighted in 
 The "index" column is automatically generated whenever you save or load. If you edit the value, you can then sort the list by index (using the arrow in the header). When you save, the current display order is the order for saving, and new indices are created.
 
 ## To Do (definitely)
-- 
+- read and save style from user specified location (don't assume default)
 
 ## To Do (maybe)
 - duplicate style
