@@ -40,7 +40,7 @@ class StyleEditor:
       return
     dts = data_to_save.drop(index=[i for (i, row) in data_to_save.iterrows() if row[1]==''])
     dts.to_csv("styles.csv", columns=cls.cols, index=False)
-    return gr.Button.update(interactive=False)
+    return gr.Button.update(interactive=True)
   
   @classmethod
   def enable_save(cls):
@@ -52,7 +52,7 @@ class StyleEditor:
       with gr.Row(equal_height=True):
         with gr.Column(scale=1, min_width=100):
           cls.load_button = gr.Button(value="Reload Styles", elem_id="style_editor_load")
-          cls.save_button = gr.Button(value="Save Styles", elem_id="style_editor_save", interactive=False)
+          cls.save_button = gr.Button(value="Save Styles", elem_id="style_editor_save", interactive=True)
       #with gr.Row(equal_height=True):
         with gr.Column(scale=3, min_width=100):
           cls.filter_box = gr.Textbox(max_lines=1, interactive=True, placeholder="filter", elem_id="style_editor_filter", show_label=False)
