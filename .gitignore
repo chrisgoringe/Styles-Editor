@@ -151,5 +151,3 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 scripts/Styles-Editor.code-workspace
-styles.csv
-test.py
