@@ -88,9 +88,10 @@ class StyleEditor:
           cls.filter_box = gr.Textbox(max_lines=1, interactive=True, placeholder="filter", elem_id="style_editor_filter", show_label=False)
           cls.filter_select = gr.Dropdown(choices=["Exact match", "Case insensitive", "regex"], value="Exact match", show_label=False)
         with gr.Column(scale=2, min_width=100):
-          cls.search_box = gr.Textbox(max_lines=1, interactive=True, placeholder="search for", show_label=False)
-          cls.replace_box= gr.Textbox(max_lines=1, interactive=True, placeholder="replace with", show_label=False)
-          cls.search_and_replace_button = gr.Button(value="Search and Replace")
+          with gr.Group():
+            cls.search_box = gr.Textbox(max_lines=1, interactive=True, placeholder="search for", show_label=False)
+            cls.replace_box= gr.Textbox(max_lines=1, interactive=True, placeholder="replace with", show_label=False)
+            cls.search_and_replace_button = gr.Button(value="Search and Replace")
       with gr.Row():
         cls.dataeditor = gr.Dataframe(value=cls.load_styles, label="Styles", 
                                       col_count=(len(cls.cols)+1,'fixed'), 
