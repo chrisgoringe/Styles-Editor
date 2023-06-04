@@ -20,6 +20,7 @@ class Script(scripts.Script):
   
 class StyleEditor:
   cols = ['name','prompt','negative_prompt', 'notes']
+  full_cols = ['index', 'name','prompt','negative_prompt', 'notes']
   dataframe:pd.DataFrame = None
   dataeditor = None
   as_last_saved:np.ndarray = None
@@ -62,6 +63,18 @@ class StyleEditor:
       except:
         cls.save_enabled = True
     return gr.Button.update(interactive=cls.save_enabled)
+  
+  @classmethod
+  def search_and_replace(cls, search:str, replace:str, current_data:pd.DataFrame):
+    if len(search)==0:
+      return current_data
+    data_np = current_data.to_numpy()
+    for i, row in enumerate(data_np):
+      for j, item in enumerate(row):
+        if isinstance(item,str) and search in item:
+          data_np[i][j] = item.replace(search, replace)
+    return pd.DataFrame(data=data_np, columns=cls.full_cols)
+
 
   @classmethod
   def on_ui_tabs(cls):
@@ -74,6 +87,10 @@ class StyleEditor:
         with gr.Column(scale=3, min_width=100):
           cls.filter_box = gr.Textbox(max_lines=1, interactive=True, placeholder="filter", elem_id="style_editor_filter", show_label=False)
           cls.filter_select = gr.Dropdown(choices=["Exact match", "Case insensitive", "regex"], value="Exact match", show_label=False)
+        with gr.Column(scale=2, min_width=100):
+          cls.search_box = gr.Textbox(max_lines=1, interactive=True, placeholder="search for", show_label=False)
+          cls.replace_box= gr.Textbox(max_lines=1, interactive=True, placeholder="replace with", show_label=False)
+          cls.search_and_replace_button = gr.Button(value="Search and Replace")
       with gr.Row():
         cls.dataeditor = gr.Dataframe(value=cls.load_styles, label="Styles", 
                                       col_count=(len(cls.cols)+1,'fixed'), 
@@ -83,6 +100,7 @@ class StyleEditor:
 
       cls.load_button.click(fn=cls.load_styles, outputs=cls.dataeditor)
       cls.save_button.click(fn=cls.save_styles, inputs=cls.dataeditor, outputs=cls.save_button, _js="refresh_style_list")
+      cls.search_and_replace_button.click(fn=cls.search_and_replace, inputs=[cls.search_box, cls.replace_box, cls.dataeditor], outputs=cls.dataeditor)
       cls.filter_box.change(fn=None, inputs=[cls.filter_box, cls.filter_select], _js="filter_style_list")
       cls.filter_select.change(fn=None, inputs=[cls.filter_box, cls.filter_select], _js="filter_style_list")
       cls.dataeditor.change(fn=None, inputs=[cls.filter_box, cls.filter_select], _js="filter_style_list")
