@@ -1,7 +1,7 @@
 import gradio as gr
 import modules.scripts as scripts
 from modules import script_callbacks
-from modules.shared import prompt_styles
+from modules.shared import cmd_opts, opts
 import pandas as pd
 
 class Script(scripts.Script):
@@ -21,7 +21,10 @@ class StyleEditor:
   cols = ['name','prompt','negative_prompt', 'notes']
   dataframe = None
   dataeditor = None
-  style_file_path = "styles.csv"
+  try:
+    style_file_path = cmd_opts.styles_file  #Automatic1111
+  except:
+    style_file_path = getattr(opts, 'styles_dir', None)
 
   @classmethod
   def load_styles(cls):
