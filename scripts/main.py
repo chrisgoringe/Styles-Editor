@@ -3,6 +3,7 @@ import modules.scripts as scripts
 from modules import script_callbacks
 from modules.shared import cmd_opts, opts
 import pandas as pd
+import numpy as np
 
 class Script(scripts.Script):
   def __init__(self) -> None:
@@ -19,8 +20,10 @@ class Script(scripts.Script):
   
 class StyleEditor:
   cols = ['name','prompt','negative_prompt', 'notes']
-  dataframe = None
+  dataframe:pd.DataFrame = None
   dataeditor = None
+  as_last_saved:np.ndarray = None
+  save_enabled = False
   try:
     style_file_path = cmd_opts.styles_file  #Automatic1111
   except:
@@ -36,19 +39,29 @@ class StyleEditor:
       cls.dataframe = pd.DataFrame(columns=cls.cols)
     if cls.dataframe.shape[1]==4:
       cls.dataframe.insert(loc=0, column="index", value=[i for i in range(1,cls.dataframe.shape[0]+1)])
+    cls.dataframe.fillna('', inplace=True)
+    cls.as_last_saved = cls.dataframe.to_numpy(copy=True)
     return cls.dataframe
 
   @classmethod
   def save_styles(cls, data_to_save:pd.DataFrame):
-    if cls.dataframe is None:
-      return
     dts = data_to_save.drop(index=[i for (i, row) in data_to_save.iterrows() if row[1]==''])
     dts.to_csv(cls.style_file_path, columns=cls.cols, index=False)
-    return gr.Button.update(interactive=True)
+    cls.as_last_saved = cls.dataframe.to_numpy(copy=True)
+    cls.save_enabled = False
+    return gr.Button.update(interactive=cls.save_enabled)
   
   @classmethod
-  def enable_save(cls):
-    return gr.Button.update(interactive=True)
+  def maybe_enable_save(cls, current_data:pd.DataFrame):
+    if not cls.save_enabled:
+      try:
+        current_data.fillna('', inplace=True)
+        cdnp = current_data.to_numpy()
+        equal = np.array_equal(cdnp, cls.as_last_saved)
+        cls.save_enabled = not equal
+      except:
+        cls.save_enabled = True
+    return gr.Button.update(interactive=cls.save_enabled)
 
   @classmethod
   def on_ui_tabs(cls):
@@ -56,7 +69,7 @@ class StyleEditor:
       with gr.Row(equal_height=True):
         with gr.Column(scale=1, min_width=100):
           cls.load_button = gr.Button(value="Reload Styles", elem_id="style_editor_load")
-          cls.save_button = gr.Button(value="Save Styles", elem_id="style_editor_save", interactive=True)
+          cls.save_button = gr.Button(value="Save Styles", elem_id="style_editor_save", interactive=False)
       #with gr.Row(equal_height=True):
         with gr.Column(scale=3, min_width=100):
           cls.filter_box = gr.Textbox(max_lines=1, interactive=True, placeholder="filter", elem_id="style_editor_filter", show_label=False)
@@ -73,7 +86,7 @@ class StyleEditor:
       cls.filter_box.change(fn=None, inputs=[cls.filter_box, cls.filter_select], _js="filter_style_list")
       cls.filter_select.change(fn=None, inputs=[cls.filter_box, cls.filter_select], _js="filter_style_list")
       cls.dataeditor.change(fn=None, inputs=[cls.filter_box, cls.filter_select], _js="filter_style_list")
-      cls.dataeditor.change(fn=cls.enable_save, outputs=cls.save_button)
+      cls.dataeditor.change(fn=cls.maybe_enable_save, inputs=cls.dataeditor, outputs=cls.save_button)
 
     return [(style_editor, "Style Editor", "style_editor")]
 
