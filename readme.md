@@ -17,6 +17,9 @@ Click on the `Style Editor` tab. If you need to reload the styles for any reason
 Click on any box and it will be highlighted. You can then type and it will replace what was there.
 Double-click in any of the boxes to get an edit cursor within the box.
 
+### Search and replace
+Enter a search term and a replace term and press the button...
+
 ### Delete styles
 A style with no name will be omitted when you save. So delete the name (click on the name to highlight the box and hit 'backspace') and then when you save the style will be removed.
 
@@ -33,14 +36,13 @@ You can use the notes column for any notes you want to make.
 Type into the filter text box to only show rows matching the text string. Matches from any of the columns. Filter can be set to Exact match, case insensitive, or regex.
 If filtering by regex, if an invalid regex is entered it will be highlighted in red.
 
-### Sorting (experimental)
+### Sorting
 The "index" column is automatically generated whenever you save or load. If you edit the value, you can then sort the list by index (using the arrow in the header). When you save, the current display order is the order for saving, and new indices are created.
 
 ## To Do (definitely)
-- read and save style from user specified location (don't assume default)
+- 
 
 ## To Do (maybe)
 - duplicate style
-- search and replace
 - multiple style files
 
