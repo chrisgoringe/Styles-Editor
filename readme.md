@@ -39,10 +39,13 @@ If filtering by regex, if an invalid regex is entered it will be highlighted in 
 ### Sorting
 The "index" column is automatically generated whenever you save or load. If you edit the value, you can then sort the list by index (using the arrow in the header). When you save, the current display order is the order for saving, and new indices are created.
 
+### Working with additional style files
+If you have a lot of styles you might want to break them up into smaller files. See the instructions in the UI.
+
 ## To Do (definitely)
 - 
 
 ## To Do (maybe)
 - duplicate style
-- multiple style files
+
 

@@ -34,3 +34,9 @@ function filter_style_list(filter_text, type) {
     }
     return (filter_text, type);
 }
+
+function new_style_file_dialog(x) {
+    let filename = prompt("New style filename (without extension)", "");
+    if (filename == null) { filename = "" }
+    return filename;
+}
