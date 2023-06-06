@@ -42,12 +42,15 @@ The "index" column is automatically generated whenever you save or load. If you 
 ### Working with additional style files
 If you have a lot of styles you might want to break them up into smaller files. See the instructions in the UI.
 
-## To Do (definitely)
+## Walk (definitely want to do)
 - 
 
-## To Do (maybe)
+## Run (these might be nice)
 - duplicate style (duplicate a row in the table)
 - swap between multiple style files
 - add style from txt2img or img2img prompts
-- autosort by index (whenever there is a change)
+- remove duplicate styles (or maybe find similar ones)
+
+## Fly (probably not, but just imagine...)
+- remote sharing of styles in a public database
 
