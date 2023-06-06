@@ -46,6 +46,8 @@ If you have a lot of styles you might want to break them up into smaller files. 
 - 
 
 ## To Do (maybe)
-- duplicate style
-
+- duplicate style (duplicate a row in the table)
+- swap between multiple style files
+- add style from txt2img or img2img prompts
+- autosort by index (whenever there is a change)
 
