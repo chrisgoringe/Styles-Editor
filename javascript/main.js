@@ -1,18 +1,26 @@
-
 function when_loaded() {
     document.getElementById('style_editor_grid').addEventListener('keydown', function(event){
         if (event.ctrlKey === true) {
             event.stopImmediatePropagation();
-            span = event.target.firstElementChild.firstElementChild;
+            span = $(event.target).find("span").eq(0);
             if (event.key === 'c') {
-                navigator.clipboard.writeText(span.textContent);
+                navigator.clipboard.writeText(span.text());
             }
             if (event.key === 'x') {
-                navigator.clipboard.writeText(span.textContent);
+                navigator.clipboard.writeText(span.text());
                 update(event.target, "");
             }
             if (event.key === 'v') {
                 navigator.clipboard.readText().then((clipText) => (update(event.target,clipText)));
+            }
+        }
+        if (event.target.tagName === 'TD') { // if a cell from the editor got a keydown
+            if ($(event.target).find("input").length == 1) { 
+                return; // if it has an active 'INPUT' child, ok
+            } else if (event.key === "Backspace" || event.key === "Delete") { 
+                return; // we can delete
+            } else {
+                event.stopImmediatePropagation(); // otherwise stop right there
             }
         }
     }, { capture: true });
@@ -27,13 +35,13 @@ function update(target, text) {
     const dblclk = new MouseEvent("dblclick");
     target.dispatchEvent(dblclk);
     setTimeout( function() {
-        const the_input = target.firstElementChild.firstElementChild;
-        the_input.value = text;
-        const rtrn = new KeyboardEvent("keydown", {
-            'key':'Enter', 'charCode':VK_RETURN, 'target':the_input,
+        const the_input = $(target).find('input').eq(0);
+        the_input.val(text);
+        const rtrn = jQuery.Event("keydown", {
+            'key':'Enter', 'target':the_input,
             'view': window, 'bubbles': true, 'cancelable': true            
         });
-        the_input.dispatchEvent(rtrn);
+        the_input.trigger(rtrn);
     }, 10);
 }
 
