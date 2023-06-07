@@ -68,7 +68,7 @@ Suggested workflow:
     save_as = filepath or cls.current_styles_file_path
     if save_as:
       dts = data_to_save.drop(index=[i for (i, row) in data_to_save.iterrows() if row[1]==''])
-      dts.to_csv(save_as, columns=cls.cols, index=False)
+      dts.to_csv(save_as, encoding="utf-8-sig", columns=cls.cols, index=False)
   
   @classmethod
   def search_and_replace(cls, search:str, replace:str, current_data:pd.DataFrame):
