@@ -1,3 +1,42 @@
+
+function when_loaded() {
+    document.getElementById('style_editor_grid').addEventListener('keydown', function(event){
+        if (event.ctrlKey === true) {
+            event.stopImmediatePropagation();
+            span = event.target.firstElementChild.firstElementChild;
+            if (event.key === 'c') {
+                navigator.clipboard.writeText(span.textContent);
+            }
+            if (event.key === 'x') {
+                navigator.clipboard.writeText(span.textContent);
+                update(event.target, "");
+            }
+            if (event.key === 'v') {
+                navigator.clipboard.readText().then((clipText) => (update(event.target,clipText)));
+            }
+        }
+    }, { capture: true });
+}
+
+function update(target, text) { 
+    // Update the cell in such a way as to get the backend to notice...
+    // - generate a double click on the original target
+    // - wait 10ms to make sure it has happened, then:
+    //   - paste the text into the input that has been created
+    //   - send a 'return' keydown event through the input
+    const dblclk = new MouseEvent("dblclick");
+    target.dispatchEvent(dblclk);
+    setTimeout( function() {
+        const the_input = target.firstElementChild.firstElementChild;
+        the_input.value = text;
+        const rtrn = new KeyboardEvent("keydown", {
+            'key':'Enter', 'charCode':VK_RETURN, 'target':the_input,
+            'view': window, 'bubbles': true, 'cancelable': true            
+        });
+        the_input.dispatchEvent(rtrn);
+    }, 10);
+}
+
 function refresh_style_list(x) {
     setTimeout( function() { 
         document.getElementById('refresh_txt2img_styles').click();
@@ -36,7 +75,7 @@ function filter_style_list(filter_text, type) {
 }
 
 function new_style_file_dialog(x) {
-    let filename = prompt("New style filename (without extension)", "");
+    let filename = prompt("New style filename", "");
     if (filename == null) { filename = "" }
     return filename;
 }

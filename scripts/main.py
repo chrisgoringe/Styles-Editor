@@ -115,10 +115,8 @@ Suggested workflow:
   def merge_style_files(cls):
     purged = [row for row in cls.select_style_file(cls.default_style_file_path).to_numpy() if "::" not in row[1]]
     for filepath in cls.additional_style_files():
-      print(filepath)
       prefix = os.path.splitext(os.path.split(filepath)[1])[0] + "::"
       for row in cls.select_style_file(filepath).to_numpy():
-        print(row)
         row[1] = prefix + row[1]
         purged.append(row)
     new_df = pd.DataFrame(purged, columns=cls.full_cols)
@@ -146,7 +144,7 @@ Suggested workflow:
       cls.save_styles(pd.DataFrame(additional_file_contents, columns=cls.full_cols), filepath)
     cls.current_styles_file_path = None
     return gr.Dropdown.update(choices=cls.additional_style_files(), value=""), cls.load_styles()
-
+  
   @classmethod
   def on_ui_tabs(cls):
     with gr.Blocks(analytics_enabled=False) as style_editor:
@@ -191,7 +189,8 @@ Suggested workflow:
       cls.filter_select.change(fn=None, inputs=[cls.filter_box, cls.filter_select], _js="filter_style_list")
 
       cls.dataeditor.change(fn=None, inputs=[cls.filter_box, cls.filter_select], _js="filter_style_list")
-      cls.dataeditor.input(fn=cls.save_styles, inputs=cls.dataeditor)
+      cls.dataeditor.change(fn=cls.save_styles, inputs=cls.dataeditor)
+      style_editor.load(fn=None, _js="when_loaded")
 
       cls.use_additional_styles_checkbox.change(fn=cls.use_additional_styles, inputs=[cls.use_additional_styles_checkbox, cls.style_file_selection], outputs=[cls.additional_file_display, cls.dataeditor])
       cls.create_additional_stylefile.click(fn=cls.create_style_file, inputs=dummy_component, outputs=cls.style_file_selection, _js="new_style_file_dialog")
