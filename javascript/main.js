@@ -4,10 +4,10 @@ function when_loaded() {
             event.stopImmediatePropagation();
             span = event.target.querySelector("span");
             if (event.key === 'c') {
-                navigator.clipboard.writeText(span.text());
+                navigator.clipboard.writeText(span.textContent);
             }
             if (event.key === 'x') {
-                navigator.clipboard.writeText(span.text());
+                navigator.clipboard.writeText(span.textContent);
                 update(event.target, "");
             }
             if (event.key === 'v') {
