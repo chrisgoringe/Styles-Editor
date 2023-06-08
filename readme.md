@@ -45,10 +45,13 @@ The "index" column is automatically generated whenever you save or load. If you 
 ### Working with additional style files
 If you have a lot of styles you might want to break them up into smaller files. See the instructions in the UI.
 
+## Crawl (it's broken if this isn't done)
+
 ## Walk (definitely want to do)
 - some sort of backup mechanism
 - automatically merge changes into master (so editing subfiles is just a view on the master)
 - check that additional style files are preserved on update
+- prevent stylse titled `blah::` being lost if there isn't an additional style file for them (create it?)
 
 ## Run (these might be nice)
 - duplicate style (duplicate a row in the table)
