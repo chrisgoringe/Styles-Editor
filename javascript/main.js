@@ -2,7 +2,7 @@ function when_loaded() {
     document.getElementById('style_editor_grid').addEventListener('keydown', function(event){
         if (event.ctrlKey === true) {
             event.stopImmediatePropagation();
-            span = $(event.target).find("span").eq(0);
+            span = event.target.querySelector("span");
             if (event.key === 'c') {
                 navigator.clipboard.writeText(span.text());
             }
@@ -15,7 +15,7 @@ function when_loaded() {
             }
         }
         if (event.target.tagName === 'TD') { // if a cell from the editor got a keydown
-            if ($(event.target).find("input").length == 1) { 
+            if (event.target.querySelector("input")) { 
                 return; // if it has an active 'INPUT' child, ok
             } else if (event.key === "Backspace" || event.key === "Delete") { 
                 return; // we can delete
@@ -35,7 +35,7 @@ function update(target, text) {
     const dblclk = new MouseEvent("dblclick");
     target.dispatchEvent(dblclk);
     setTimeout( function() {
-        const the_input = $(target).find('input').eq(0);
+        const the_input = target.querySelector('input');
         the_input.val(text);
         const rtrn = jQuery.Event("keydown", {
             'key':'Enter', 'target':the_input,
