@@ -45,15 +45,6 @@ function update(target, text) {
     }, 10);
 }
 
-function refresh_style_list(x) {
-    setTimeout( function() { 
-        document.getElementById('refresh_txt2img_styles').click();
-        document.getElementById('refresh_img2img_styles').click();
-        document.getElementById('style_editor_load').click();
-    }, 1000);
-    return x;
-}
-
 function filter_style_list(filter_text, type) {
     if (type=="regex") { 
         filter = document.getElementById('style_editor_filter').firstElementChild.lastElementChild;
