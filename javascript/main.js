@@ -36,9 +36,9 @@ function update(target, text) {
     target.dispatchEvent(dblclk);
     setTimeout( function() {
         const the_input = target.querySelector('input');
-        the_input.textContent=text;
+        the_input.value = text;
         const rtrn = new KeyboardEvent( "keydown", {
-            'key':'Enter', 'target':the_input,
+            'key': 'Enter', 'target': the_input,
             'view': window, 'bubbles': true, 'cancelable': true            
         });
         the_input.dispatchEvent(rtrn);
