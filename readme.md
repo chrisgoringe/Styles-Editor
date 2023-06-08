@@ -47,7 +47,7 @@ If you have a lot of styles you might want to break them up into smaller files. 
 
 ## To Do (definitely)
 - some sort of backup mechanism
-- clean up javascript using jquery notation
+- Remove jQuery notation  (use https://developer.mozilla.org/en-US/docs/Web/API/Element/querySelector)
 - fix refresh of style lists
 
 ## To Do (maybe)
