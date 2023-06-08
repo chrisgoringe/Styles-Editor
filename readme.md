@@ -47,13 +47,13 @@ If you have a lot of styles you might want to break them up into smaller files. 
 
 ## To Do (definitely)
 - some sort of backup mechanism
-- fix refresh of style lists
 - automatically merge changes into master (so editing subfiles is just a view on the master)
 
 ## To Do (maybe)
 - duplicate style (duplicate a row in the table)
 - swap between multiple style files
 - add style from txt2img or img2img prompts
-- copy selected styles between tabs not just prompt
+- copy selected styles between tabs not just prompt (not really this extension, but a pain)
+- refresh style lists in UI
 
 
