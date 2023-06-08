@@ -1,7 +1,7 @@
 import gradio as gr
 import modules.scripts as scripts
 from modules import script_callbacks
-from modules.shared import cmd_opts, opts
+from modules.shared import cmd_opts, opts, prompt_styles
 import pandas as pd
 import numpy as np
 import os
@@ -38,7 +38,7 @@ Suggested workflow:
 - `Merge` the styles after making changes
 """
   cols = ['name','prompt','negative_prompt', 'notes']
-  full_cols = ['index', 'name','prompt','negative_prompt', 'notes']
+  full_cols = ['sort', 'name','prompt','negative_prompt', 'notes']
   dataframe:pd.DataFrame = None
   dataeditor = None
   basedir = scripts.basedir()
@@ -58,17 +58,34 @@ Suggested workflow:
     except:
       cls.dataframe = pd.DataFrame(columns=cls.cols)
     if cls.dataframe.shape[1]==4:
-      cls.dataframe.insert(loc=0, column="index", value=[i for i in range(1,cls.dataframe.shape[0]+1)])
+      cls.dataframe.insert(loc=0, column="sort", value=[i for i in range(1,cls.dataframe.shape[0]+1)])
     cls.dataframe.fillna('', inplace=True)
     cls.as_last_saved = cls.dataframe.to_numpy(copy=True)
     return cls.dataframe
 
+  @staticmethod
+  def to_numeric(series:pd.Series):
+    nums = pd.to_numeric(series)
+    if any(nums.isna()):
+      raise Exception("don't update display")
+    return nums
+
   @classmethod
-  def save_styles(cls, data_to_save:pd.DataFrame, filepath=None):
+  def save_styles(cls, data_to_save:pd.DataFrame, sort_first=False, filepath=None):
+    update_display = True
     save_as = filepath or cls.current_styles_file_path
+    if sort_first:
+      try:
+        dts = data_to_save.sort_values(by='sort', axis='index', inplace=False, na_position='first', key=cls.to_numeric)
+        data_to_save = dts
+      except:
+        update_display = False
     if save_as:
       dts = data_to_save.drop(index=[i for (i, row) in data_to_save.iterrows() if row[1]==''])
       dts.to_csv(save_as, encoding="utf-8-sig", columns=cls.cols, index=False)
+      if (save_as == cls.default_style_file_path):
+        prompt_styles.reload()
+    return data_to_save if update_display else gr.DataFrame.update()
   
   @classmethod
   def search_and_replace(cls, search:str, replace:str, current_data:pd.DataFrame):
@@ -120,7 +137,7 @@ Suggested workflow:
         row[1] = prefix + row[1]
         purged.append(row)
     new_df = pd.DataFrame(purged, columns=cls.full_cols)
-    cls.save_styles(new_df, cls.default_style_file_path)
+    cls.save_styles(new_df, filepath=cls.default_style_file_path)
     return False
   
   @staticmethod
@@ -141,7 +158,7 @@ Suggested workflow:
       for prefixed_style in prefixed_styles:
         if prefixed_style[1].startswith(prefix):
           additional_file_contents = cls.add_or_replace(additional_file_contents, prefixed_style, prefix)
-      cls.save_styles(pd.DataFrame(additional_file_contents, columns=cls.full_cols), filepath)
+      cls.save_styles(pd.DataFrame(additional_file_contents, columns=cls.full_cols), filepath=filepath)
     cls.current_styles_file_path = None
     return gr.Dropdown.update(choices=cls.additional_style_files(), value=""), cls.load_styles()
   
@@ -156,11 +173,10 @@ Suggested workflow:
           cls.filter_box = gr.Textbox(max_lines=1, interactive=True, placeholder="filter", elem_id="style_editor_filter", show_label=False)
           cls.filter_select = gr.Dropdown(choices=["Exact match", "Case insensitive", "regex"], value="Exact match", show_label=False)
         with gr.Column(scale=2, min_width=100):
-          #with gr.Accordion(open=False, label="Search and Replace"):
-            cls.search_box = gr.Textbox(max_lines=1, interactive=True, placeholder="search for", show_label=False)
-            cls.replace_box= gr.Textbox(max_lines=1, interactive=True, placeholder="replace with", show_label=False)
-            cls.search_and_replace_button = gr.Button(value="Search and Replace")
-      with gr.Row(variant="panel"):
+          cls.search_box = gr.Textbox(max_lines=1, interactive=True, placeholder="search for", show_label=False)
+          cls.replace_box= gr.Textbox(max_lines=1, interactive=True, placeholder="replace with", show_label=False)
+          cls.search_and_replace_button = gr.Button(value="Search and Replace")
+      with gr.Row():
         with gr.Column():
           with gr.Row():
             cls.use_additional_styles_checkbox = gr.Checkbox(value=False, label="Edit additional style files")
@@ -178,8 +194,15 @@ Suggested workflow:
               with gr.Accordion(open=False, label="Help!"):
                 gr.Markdown(value=cls.help_text)     
       with gr.Row():
-        cls.dataeditor = gr.Dataframe(value=cls.load_styles, label="Styles", col_count=(len(cls.cols)+1,'fixed'), 
-                                      wrap=True, max_rows=1000, show_label=False, interactive=True, elem_id="style_editor_grid")
+        with gr.Column(scale=1, min_width=150):
+          cls.autosort_checkbox = gr.Checkbox(value=False, label="Autosort")
+        with gr.Column(scale=1, min_width=250):
+          cls.fix_sort_column_button = gr.Button(value="Renumber sort columm")
+        with gr.Column(scale=10):
+          pass
+      with gr.Row():
+        cls.dataeditor = gr.Dataframe(value=cls.load_styles, col_count=(len(cls.cols)+1,'fixed'), 
+                                          wrap=True, max_rows=1000, show_label=False, interactive=True, elem_id="style_editor_grid")
 
       cls.load_button.click(fn=cls.load_styles, outputs=cls.dataeditor)
       
@@ -189,7 +212,11 @@ Suggested workflow:
       cls.filter_select.change(fn=None, inputs=[cls.filter_box, cls.filter_select], _js="filter_style_list")
 
       cls.dataeditor.change(fn=None, inputs=[cls.filter_box, cls.filter_select], _js="filter_style_list")
-      cls.dataeditor.change(fn=cls.save_styles, inputs=cls.dataeditor)
+
+      cls.dataeditor.input(fn=cls.save_styles, inputs=[cls.dataeditor, cls.autosort_checkbox], outputs=cls.dataeditor)
+      cls.autosort_checkbox.change(fn=cls.save_styles, inputs=[cls.dataeditor, cls.autosort_checkbox], outputs=cls.dataeditor)
+      cls.fix_sort_column_button.click(fn=cls.load_styles, outputs=cls.dataeditor)
+
       style_editor.load(fn=None, _js="when_loaded")
 
       cls.use_additional_styles_checkbox.change(fn=cls.use_additional_styles, inputs=[cls.use_additional_styles_checkbox, cls.style_file_selection], outputs=[cls.additional_file_display, cls.dataeditor])

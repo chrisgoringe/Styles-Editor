@@ -45,16 +45,20 @@ The "index" column is automatically generated whenever you save or load. If you 
 ### Working with additional style files
 If you have a lot of styles you might want to break them up into smaller files. See the instructions in the UI.
 
-## To Do (definitely)
+## Walk (definitely want to do)
 - some sort of backup mechanism
-- fix refresh of style lists
 - automatically merge changes into master (so editing subfiles is just a view on the master)
 - check that additional style files are preserved on update
 
-## To Do (maybe)
+## Run (these might be nice)
 - duplicate style (duplicate a row in the table)
 - swap between multiple style files
 - add style from txt2img or img2img prompts
-- copy selected styles between tabs not just prompt
+- copy selected styles between tabs not just prompt (not really this extension, but a pain)
+- remove duplicate styles (or maybe find similar ones)
+- refresh style lists in UI
+
+## Fly (probably not, but just imagine...)
+- remote sharing of styles in a public database
 
 
