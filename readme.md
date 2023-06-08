@@ -48,10 +48,12 @@ If you have a lot of styles you might want to break them up into smaller files. 
 ## To Do (definitely)
 - some sort of backup mechanism
 - clean up javascript using jquery notation
+- fix refresh of style lists
 
 ## To Do (maybe)
 - duplicate style (duplicate a row in the table)
 - swap between multiple style files
 - add style from txt2img or img2img prompts
+- copy selected styles between tabs not just prompt
 
 
