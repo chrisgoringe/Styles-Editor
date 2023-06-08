@@ -20,8 +20,11 @@ Double-click in any of the boxes to get an edit cursor within the box.
 ### Search and replace
 Enter a search term and a replace term and press the button...
 
+### Cut, copy, paste
+Ctrl-X, C and V all work as you might expect them to.
+
 ### Delete styles
-A style with no name will be omitted when you save. So delete the name (click on the name to highlight the box and hit 'backspace') and then when you save the style will be removed.
+A style with no name won't be saved. So delete the name (click on the name to highlight the box and hit 'backspace') and then when you save (which happens automatically in the background) the style will be removed. To check, you can use the 'Reload syles' button.
 
 ### Add styles
 Use the `New row` button, and then edit the boxes as you need. Note that if you have a filter applied (see below) the new row probably won't appear because it is empty!
@@ -37,20 +40,24 @@ Type into the filter text box to only show rows matching the text string. Matche
 If filtering by regex, if an invalid regex is entered it will be highlighted in red.
 
 ### Sorting
-The "index" column is automatically generated whenever you save or load. If you edit the value, you can then sort the list by index (using the arrow in the header). When you save, the current display order is the order for saving, and new indices are created.
+The "index" column is automatically generated whenever you save or load. If you edit the value, you can then sort the list by index (using the arrow in the header). 
 
 ### Working with additional style files
 If you have a lot of styles you might want to break them up into smaller files. See the instructions in the UI.
 
 ## Walk (definitely want to do)
-- 
+- some sort of backup mechanism
+- automatically merge changes into master (so editing subfiles is just a view on the master)
 
 ## Run (these might be nice)
 - duplicate style (duplicate a row in the table)
 - swap between multiple style files
 - add style from txt2img or img2img prompts
+- copy selected styles between tabs not just prompt (not really this extension, but a pain)
 - remove duplicate styles (or maybe find similar ones)
+- refresh style lists in UI
 
 ## Fly (probably not, but just imagine...)
 - remote sharing of styles in a public database
+
 

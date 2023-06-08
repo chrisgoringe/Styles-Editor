@@ -1,7 +1,7 @@
 import gradio as gr
 import modules.scripts as scripts
 from modules import script_callbacks
-from modules.shared import cmd_opts, opts
+from modules.shared import cmd_opts, opts, prompt_styles
 import pandas as pd
 import numpy as np
 import os
@@ -82,7 +82,9 @@ Suggested workflow:
         update_display = False
     if save_as:
       dts = data_to_save.drop(index=[i for (i, row) in data_to_save.iterrows() if row[1]==''])
-      dts.to_csv(save_as, columns=cls.cols, index=False)
+      dts.to_csv(save_as, encoding="utf-8-sig", columns=cls.cols, index=False)
+      if (save_as == cls.default_style_file_path):
+        prompt_styles.reload()
     return data_to_save if update_display else gr.DataFrame.update()
   
   @classmethod
@@ -130,10 +132,8 @@ Suggested workflow:
   def merge_style_files(cls):
     purged = [row for row in cls.select_style_file(cls.default_style_file_path).to_numpy() if "::" not in row[1]]
     for filepath in cls.additional_style_files():
-      print(filepath)
       prefix = os.path.splitext(os.path.split(filepath)[1])[0] + "::"
       for row in cls.select_style_file(filepath).to_numpy():
-        print(row)
         row[1] = prefix + row[1]
         purged.append(row)
     new_df = pd.DataFrame(purged, columns=cls.full_cols)
@@ -161,7 +161,7 @@ Suggested workflow:
       cls.save_styles(pd.DataFrame(additional_file_contents, columns=cls.full_cols), filepath=filepath)
     cls.current_styles_file_path = None
     return gr.Dropdown.update(choices=cls.additional_style_files(), value=""), cls.load_styles()
-
+  
   @classmethod
   def on_ui_tabs(cls):
     with gr.Blocks(analytics_enabled=False) as style_editor:
@@ -212,9 +212,12 @@ Suggested workflow:
       cls.filter_select.change(fn=None, inputs=[cls.filter_box, cls.filter_select], _js="filter_style_list")
 
       cls.dataeditor.change(fn=None, inputs=[cls.filter_box, cls.filter_select], _js="filter_style_list")
+
       cls.dataeditor.input(fn=cls.save_styles, inputs=[cls.dataeditor, cls.autosort_checkbox], outputs=cls.dataeditor)
       cls.autosort_checkbox.change(fn=cls.save_styles, inputs=[cls.dataeditor, cls.autosort_checkbox], outputs=cls.dataeditor)
       cls.fix_sort_column_button.click(fn=cls.load_styles, outputs=cls.dataeditor)
+
+      style_editor.load(fn=None, _js="when_loaded")
 
       cls.use_additional_styles_checkbox.change(fn=cls.use_additional_styles, inputs=[cls.use_additional_styles_checkbox, cls.style_file_selection], outputs=[cls.additional_file_display, cls.dataeditor])
       cls.create_additional_stylefile.click(fn=cls.create_style_file, inputs=dummy_component, outputs=cls.style_file_selection, _js="new_style_file_dialog")
