@@ -32,16 +32,16 @@ function update(target, text) {
     // - wait 10ms to make sure it has happened, then:
     //   - paste the text into the input that has been created
     //   - send a 'return' keydown event through the input
-    const dblclk = new MouseEvent("dblclick");
+    const dblclk = new MouseEvent("dblclick", {"bubbles":true, "cancelable":true});
     target.dispatchEvent(dblclk);
     setTimeout( function() {
         const the_input = target.querySelector('input');
-        the_input.val(text);
-        const rtrn = jQuery.Event("keydown", {
+        the_input.textContent=text;
+        const rtrn = new KeyboardEvent( "keydown", {
             'key':'Enter', 'target':the_input,
             'view': window, 'bubbles': true, 'cancelable': true            
         });
-        the_input.trigger(rtrn);
+        the_input.dispatchEvent(rtrn);
     }, 10);
 }
 
