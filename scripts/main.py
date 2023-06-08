@@ -1,7 +1,7 @@
 import gradio as gr
 import modules.scripts as scripts
 from modules import script_callbacks
-from modules.shared import cmd_opts, opts
+from modules.shared import cmd_opts, opts, prompt_styles
 import pandas as pd
 import numpy as np
 import os
@@ -69,6 +69,8 @@ Suggested workflow:
     if save_as:
       dts = data_to_save.drop(index=[i for (i, row) in data_to_save.iterrows() if row[1]==''])
       dts.to_csv(save_as, encoding="utf-8-sig", columns=cls.cols, index=False)
+      if (save_as == cls.default_style_file_path):
+        prompt_styles.reload()
   
   @classmethod
   def search_and_replace(cls, search:str, replace:str, current_data:pd.DataFrame):
