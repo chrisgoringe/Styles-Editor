@@ -46,12 +46,16 @@ The "index" column is automatically generated whenever you save or load. If you 
 If you have a lot of styles you might want to break them up into smaller files. See the instructions in the UI.
 
 ## Crawl (it's broken if this isn't done)
+- prevent style titled `blah::` being lost if there isn't an additional style file for them (create it?)
 
 ## Walk (definitely want to do)
-- some sort of backup mechanism
-- automatically merge changes into master (so editing subfiles is just a view on the master)
+- some sort of backup/restore mechanism (every change? keep last X? every 5 minutes if changes?)
+- automatically extract and merge (so editing subfiles is just a view on the master)
 - check that additional style files are preserved on update
-- prevent stylse titled `blah::` being lost if there isn't an additional style file for them (create it?)
+- UI enhancements
+  - When editing additional styles but none selected, hide the table
+  - Better arrangement/styling of buttons (although auto extract/merge will help)
+- eliminate need for `Reload styles` (automatically do it when switching to tab?)
 
 ## Run (these might be nice)
 - duplicate style (duplicate a row in the table)
