@@ -49,6 +49,7 @@ If you have a lot of styles you might want to break them up into smaller files. 
 - some sort of backup mechanism
 - fix refresh of style lists
 - automatically merge changes into master (so editing subfiles is just a view on the master)
+- check that additional style files are preserved on update
 
 ## To Do (maybe)
 - duplicate style (duplicate a row in the table)
