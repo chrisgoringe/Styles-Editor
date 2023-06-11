@@ -54,7 +54,9 @@ Suggested workflow:
     # bad lines are probably ones that had no 'notes', so append a ''
     # skip the first line (which has headers) and use our own
     try:
-      cls.dataframe = pd.read_csv(cls.current_styles_file_path, header=None, names=cls.cols, on_bad_lines=lambda x : x.append(''), engine='python', skiprows=[0])
+      cls.dataframe = pd.read_csv(cls.current_styles_file_path, header=None, names=cls.cols, 
+                                  on_bad_lines=lambda x : (x.append('') if len(x)==3 else None), 
+                                  engine='python', skiprows=[0], usecols=[0,1,2,3])
     except:
       cls.dataframe = pd.DataFrame(columns=cls.cols)
     if cls.dataframe.shape[1]==4:
