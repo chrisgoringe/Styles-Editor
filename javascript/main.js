@@ -24,6 +24,21 @@ function when_loaded() {
             }
         }
     }, { capture: true });
+    document.getElementById('style_editor_grid').addEventListener('click', function(event){
+        if (event.button === 2) {
+            if (globalThis.selectedRow) {
+                globalThis.selectedRow.style = globalThis.savedStyle;
+                globalThis.selectedRow = null;
+            }
+            row = event.target.closest("tr");
+            if (row) {
+                globalThis.savedStyle = row.style;
+                globalThis.selectedRow = row;
+                row.style = "background: #333";
+                event.stopImmediatePropagation();
+            }
+        }
+    }, { capture: true });
 }
 
 function press_refresh_button(tab) {
