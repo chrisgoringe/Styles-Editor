@@ -25,7 +25,7 @@ function when_loaded() {
         }
     }, { capture: true });
     document.getElementById('style_editor_grid').addEventListener('click', function(event){
-        if (event.button === 2) {
+        if (event.shiftKey) {
             if (globalThis.selectedRow) {
                 globalThis.selectedRow.style = globalThis.savedStyle;
                 globalThis.selectedRow = null;
