@@ -48,9 +48,11 @@ Suggested workflow:
   except:
     default_style_file_path = getattr(opts, 'styles_dir', None)
   current_styles_file_path = default_style_file_path
+  this_tab_active = False
 
   @classmethod
   def load_styles(cls):
+    cls.this_tab_active = True
     # skip the first line (which has headers) and use our own
     try:
       cls.dataframe = pd.read_csv(cls.current_styles_file_path, header=None, names=cls.cols, 
@@ -68,6 +70,10 @@ Suggested workflow:
     if any(nums.isna()):
       raise Exception("don't update display")
     return nums
+  
+  @classmethod
+  def another_tab_selected(cls):
+    cls.this_tab_active = False
 
   @classmethod
   def save_styles(cls, data_to_save:pd.DataFrame, sort_first=False, filepath=None):
@@ -166,8 +172,8 @@ Suggested workflow:
     with gr.Blocks(analytics_enabled=False) as style_editor:
       dummy_component = gr.Label(visible=False)
       with gr.Row():
-        with gr.Column(scale=1, min_width=100):
-          cls.load_button = gr.Button(value="Reload Styles", elem_id="style_editor_load")
+        #with gr.Column(scale=1, min_width=100):
+        #  cls.load_button = gr.Button(value="Reload Styles", elem_id="style_editor_load")
         with gr.Column(scale=3, min_width=100):
           cls.filter_box = gr.Textbox(max_lines=1, interactive=True, placeholder="filter", elem_id="style_editor_filter", show_label=False)
           cls.filter_select = gr.Dropdown(choices=["Exact match", "Case insensitive", "regex"], value="Exact match", show_label=False)
@@ -203,7 +209,7 @@ Suggested workflow:
         cls.dataeditor = gr.Dataframe(value=cls.load_styles, col_count=(len(cls.cols)+1,'fixed'), 
                                           wrap=True, max_rows=1000, show_label=False, interactive=True, elem_id="style_editor_grid")
 
-      cls.load_button.click(fn=cls.load_styles, outputs=cls.dataeditor)
+      #cls.load_button.click(fn=cls.load_styles, outputs=cls.dataeditor)
       
       cls.search_and_replace_button.click(fn=cls.search_and_replace, inputs=[cls.search_box, cls.replace_box, cls.dataeditor], outputs=cls.dataeditor)
 
@@ -228,7 +234,15 @@ Suggested workflow:
 
   @classmethod
   def on_app_started(cls, block, fastapi):
-    pass
+    for tabs in block.children:
+      if isinstance(tabs, gr.layouts.Tabs):
+        break
+    for tab in tabs.children:
+      if isinstance(tabs, gr.layouts.Tab):
+        if tab.id=="style_editor":
+          tab.select(fn=cls.load_styles, outputs=cls.dataeditor)
+        else:
+          tab.select(fn=cls.another_tab_selected)
 
 script_callbacks.on_ui_tabs(StyleEditor.on_ui_tabs)
 script_callbacks.on_app_started(StyleEditor.on_app_started)
