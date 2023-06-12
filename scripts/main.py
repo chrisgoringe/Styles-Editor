@@ -82,8 +82,8 @@ Suggested workflow:
       except:
         update_display = False
     if save_as:
-      dts = data_to_save.drop(index=[i for (i, row) in data_to_save.iterrows() if row[1]==''])
-      dts.to_csv(save_as, encoding="utf-8-sig", columns=cls.cols, index=False)
+      data_to_save = data_to_save.drop(index=[i for (i, row) in data_to_save.iterrows() if row[1]==''])
+      data_to_save.to_csv(save_as, encoding="utf-8-sig", columns=cls.cols, index=False)
       if (save_as == cls.default_style_file_path):
         prompt_styles.reload()
     return data_to_save if update_display else gr.DataFrame.update()
