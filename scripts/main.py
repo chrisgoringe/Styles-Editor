@@ -226,4 +226,8 @@ Suggested workflow:
 
     return [(style_editor, "Style Editor", "style_editor")]
 
+  def on_app_started(cls, block, fastapi):
+    pass
+  
 script_callbacks.on_ui_tabs(StyleEditor.on_ui_tabs)
+script_callbacks.on_app_started(StyleEditor.on_app_Started)
