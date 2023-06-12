@@ -237,7 +237,7 @@ Suggested workflow:
     for tabs in block.children:
       if isinstance(tabs, gr.layouts.Tabs):
         for tab in tabs.children:
-          if isinstance(tabs, gr.layouts.Tab):
+          if isinstance(tab, gr.layouts.Tab):
             if tab.id=="style_editor":
               tab.select(fn=cls.load_styles, outputs=cls.dataeditor)
             else:
