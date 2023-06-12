@@ -75,7 +75,7 @@ Suggested workflow:
   def _recursive_find(cls, component, id):
     if getattr(component,'id',None) == id:
       return component
-    for child in component.children:
+    for child in getattr(component,'children',[]):
       x = cls._recursive_find(child,id)
       if x:
         return x
