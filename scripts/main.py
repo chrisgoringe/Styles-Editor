@@ -76,7 +76,7 @@ Suggested workflow:
     if component.id == id:
       return component
     for child in component.children:
-      x = cls._recursive_match(child,id)
+      x = cls._recursive_find(child,id)
       if x:
         return x
     return None
