@@ -236,13 +236,12 @@ Suggested workflow:
   def on_app_started(cls, block, fastapi):
     for tabs in block.children:
       if isinstance(tabs, gr.layouts.Tabs):
-        break
-    for tab in tabs.children:
-      if isinstance(tabs, gr.layouts.Tab):
-        if tab.id=="style_editor":
-          tab.select(fn=cls.load_styles, outputs=cls.dataeditor)
-        else:
-          tab.select(fn=cls.another_tab_selected)
+        for tab in tabs.children:
+          if isinstance(tabs, gr.layouts.Tab):
+            if tab.id=="style_editor":
+              tab.select(fn=cls.load_styles, outputs=cls.dataeditor)
+            else:
+              tab.select(fn=cls.another_tab_selected)
 
 script_callbacks.on_ui_tabs(StyleEditor.on_ui_tabs)
 script_callbacks.on_app_started(StyleEditor.on_app_started)
