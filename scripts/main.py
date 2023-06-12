@@ -241,6 +241,7 @@ Suggested workflow:
             if isinstance(tab, gr.layouts.Tab):
               if tab.id=="style_editor":
                 tab.select(fn=cls.load_styles, outputs=cls.dataeditor)
+                cls.tab = tab
               else:
                 tab.select(fn=cls.another_tab_selected)
 
