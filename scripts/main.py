@@ -37,8 +37,8 @@ Suggested workflow:
 - `Extract` the styles to get more manageable files to work with
 - `Merge` the styles after making changes
 """
-  cols = ['name','prompt','negative_prompt', 'notes']
-  full_cols = ['sort', 'name','prompt','negative_prompt', 'notes']
+  cols = ['name','prompt','negative_prompt']
+  full_cols = ['sort', 'name','prompt','negative_prompt']
   dataframe:pd.DataFrame = None
   dataeditor = None
   basedir = scripts.basedir()
@@ -51,16 +51,13 @@ Suggested workflow:
 
   @classmethod
   def load_styles(cls):
-    # bad lines are probably ones that had no 'notes', so append a ''
     # skip the first line (which has headers) and use our own
     try:
       cls.dataframe = pd.read_csv(cls.current_styles_file_path, header=None, names=cls.cols, 
-                                  on_bad_lines=lambda x : (x.append('') if len(x)==3 else None), 
-                                  engine='python', skiprows=[0], usecols=[0,1,2,3])
+                                  engine='python', skiprows=[0], usecols=[0,1,2])
     except:
       cls.dataframe = pd.DataFrame(columns=cls.cols)
-    if cls.dataframe.shape[1]==4:
-      cls.dataframe.insert(loc=0, column="sort", value=[i for i in range(1,cls.dataframe.shape[0]+1)])
+    cls.dataframe.insert(loc=0, column="sort", value=[i+1 for i in range(cls.dataframe.shape[0])])
     cls.dataframe.fillna('', inplace=True)
     cls.as_last_saved = cls.dataframe.to_numpy(copy=True)
     return cls.dataframe
