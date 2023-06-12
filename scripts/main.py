@@ -168,8 +168,6 @@ Suggested workflow:
     with gr.Blocks(analytics_enabled=False) as style_editor:
       dummy_component = gr.Label(visible=False)
       with gr.Row():
-        #with gr.Column(scale=1, min_width=100):
-        #  cls.load_button = gr.Button(value="Reload Styles", elem_id="style_editor_load")
         with gr.Column(scale=3, min_width=100):
           cls.filter_box = gr.Textbox(max_lines=1, interactive=True, placeholder="filter", elem_id="style_editor_filter", show_label=False)
           cls.filter_select = gr.Dropdown(choices=["Exact match", "Case insensitive", "regex"], value="Exact match", show_label=False)
