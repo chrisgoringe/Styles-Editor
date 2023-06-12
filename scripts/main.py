@@ -84,10 +84,9 @@ Suggested workflow:
   @classmethod
   def x2img_tab_selected(cls, event:gr.SelectData):
     for element in ['refresh_img2img_styles', 'refresh_txt2img_styles']:
-      try:
-        cls._recursive_find(event.target, element)()
-      except:
-        pass
+      x = cls._recursive_find(event.target, element)
+      if x:
+        x()
 
   @classmethod
   def save_styles(cls, data_to_save:pd.DataFrame, sort_first=False, filepath=None):
