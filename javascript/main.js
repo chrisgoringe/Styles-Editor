@@ -27,10 +27,11 @@ function when_loaded() {
 }
 
 function press_refresh_button(tab) {
-    b = window.getElementById("refresh_txt2img_styles");
+    b = document.getElementById("refresh_txt2img_styles");
     if (b) {b.click()}
-    b = window.getElementById("refresh_img2img_styles")
-    if (b) {b.click()}}
+    b = document.getElementById("refresh_img2img_styles");
+    if (b) {b.click()}
+}
 
 function update(target, text) { 
     // Update the cell in such a way as to get the backend to notice...
