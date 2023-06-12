@@ -58,7 +58,12 @@ Suggested workflow:
                                   on_bad_lines=lambda x : (x.append('') if len(x)==3 else None), 
                                   engine='python', skiprows=[0], usecols=[0,1,2,3])
     except:
-      cls.dataframe = pd.DataFrame(columns=cls.cols)
+      try:
+        cls.dataframe = pd.read_csv(cls.current_styles_file_path, header=None, names=cls.cols, 
+                                    engine='python', skiprows=[0], usecols=[0,1,2])
+        cls.dataframe.insert(loc=3, column="notes", value=[""]*cls.dataframe.shape[0])
+      except:
+        cls.dataframe = pd.DataFrame(columns=cls.cols)
     if cls.dataframe.shape[1]==4:
       cls.dataframe.insert(loc=0, column="sort", value=[i for i in range(1,cls.dataframe.shape[0]+1)])
     cls.dataframe.fillna('', inplace=True)
