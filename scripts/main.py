@@ -73,7 +73,7 @@ Suggested workflow:
   
   @classmethod
   def _recursive_find(cls, component, id):
-    if getattr(component,'id',None) == id:
+    if getattr(component,'elem_id',None) == id:
       return component
     for child in getattr(component,'children',[]):
       x = cls._recursive_find(child,id)
