@@ -72,8 +72,22 @@ Suggested workflow:
     return nums
   
   @classmethod
+  def _recursive_find(cls, component, id):
+    if component.id == id:
+      return component
+    for child in component.children:
+      x = cls._recursive_match(child,id)
+      if x:
+        return x
+    return None
+  
+  @classmethod
   def x2img_tab_selected(cls, event:gr.SelectData):
-    cls.this_tab_active = False
+    for element in ['refresh_img2img_styles', 'refresh_txt2img_styles']:
+      try:
+        cls._recursive_find(event.target, element)()
+      except:
+        pass
 
   @classmethod
   def save_styles(cls, data_to_save:pd.DataFrame, sort_first=False, filepath=None):
