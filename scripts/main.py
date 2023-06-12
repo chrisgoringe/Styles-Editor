@@ -70,23 +70,6 @@ Suggested workflow:
     if any(nums.isna()):
       raise Exception("don't update display")
     return nums
-  
-  @classmethod
-  def _recursive_find(cls, component, id):
-    if getattr(component,'elem_id',None) == id:
-      return component
-    for child in getattr(component,'children',[]):
-      x = cls._recursive_find(child,id)
-      if x:
-        return x
-    return None
-  
-  @classmethod
-  def x2img_tab_selected(cls, event:gr.SelectData):
-    for element in ['refresh_img2img_styles', 'refresh_txt2img_styles']:
-      x = cls._recursive_find(event.target, element)
-      if x:
-        x()
 
   @classmethod
   def save_styles(cls, data_to_save:pd.DataFrame, sort_first=False, filepath=None):
@@ -256,7 +239,7 @@ Suggested workflow:
                 tab.select(fn=cls.load_styles, outputs=cls.dataeditor)
                 cls.tab = tab
               elif tab.id=="txt2img" or tab.id=="img2img":
-                tab.select(fn=cls.x2img_tab_selected)
+                tab.select(fn=None, inputs=tab, _js="press_refresh_button")
 
 script_callbacks.on_ui_tabs(StyleEditor.on_ui_tabs)
 script_callbacks.on_app_started(StyleEditor.on_app_started)
