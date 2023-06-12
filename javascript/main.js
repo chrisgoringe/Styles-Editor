@@ -26,6 +26,13 @@ function when_loaded() {
     }, { capture: true });
 }
 
+function press_refresh_button(tab) {
+    b = document.getElementById("refresh_txt2img_styles");
+    if (b) {b.click()}
+    b = document.getElementById("refresh_img2img_styles");
+    if (b) {b.click()}
+}
+
 function update(target, text) { 
     // Update the cell in such a way as to get the backend to notice...
     // - generate a double click on the original target
