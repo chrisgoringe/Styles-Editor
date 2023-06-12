@@ -226,6 +226,7 @@ Suggested workflow:
 
     return [(style_editor, "Style Editor", "style_editor")]
 
+  @classmethod
   def on_app_started(cls, block, fastapi):
     pass
 
