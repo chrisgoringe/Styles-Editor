@@ -72,7 +72,7 @@ Suggested workflow:
     return nums
   
   @classmethod
-  def another_tab_selected(cls):
+  def x2img_tab_selected(cls, event:gr.SelectData):
     cls.this_tab_active = False
 
   @classmethod
@@ -242,8 +242,8 @@ Suggested workflow:
               if tab.id=="style_editor":
                 tab.select(fn=cls.load_styles, outputs=cls.dataeditor)
                 cls.tab = tab
-              else:
-                tab.select(fn=cls.another_tab_selected)
+              elif tab.id=="txt2img" or tab.id=="img2img":
+                tab.select(fn=cls.x2img_tab_selected)
 
 script_callbacks.on_ui_tabs(StyleEditor.on_ui_tabs)
 script_callbacks.on_app_started(StyleEditor.on_app_started)
