@@ -14,31 +14,43 @@ function when_loaded() {
                 navigator.clipboard.readText().then((clipText) => (update(event.target,clipText)));
             }
         }
-        if (event.target.tagName === 'TD') { // if a cell from the editor got a keydown
-            if (event.target.querySelector("input")) { 
-                return; // if it has an active 'INPUT' child, ok
-            } else if (event.key === "Backspace" || event.key === "Delete") { 
-                return; // we can delete
-            } else {
-                event.stopImmediatePropagation(); // otherwise stop right there
-            }
-        }
+
+        // if a key is pressed in a TD which has an INPUT child, or an INPUT, this is typing in a cell, allow it
+        if (event.target.tagName === 'TD' && event.target.querySelector("input")) { return; }
+        if (event.target.tagName === 'INPUT') { return; }
+
+        // if backspace or delete are pressed, and we're over the selected row, delete it
+        if (event.key === "Backspace" || event.key === "Delete") { 
+            if (event.target.closest("tr") === globalThis.selectedRow) { update(globalThis.selectedRow.querySelector("td"),"!!!"); }
+        } 
+
+        // if we get to here, stop the keypress from propogating
+        event.stopImmediatePropagation(); 
     }, { capture: true });
+
+    document.getElementById('style_editor_grid').addEventListener('contextmenu', function(event){
+        if(event.shiftKey) { return; }
+        unselect_row();    
+        row = event.target.closest("tr");
+        if (row) { select_row(row); event.stopImmediatePropagation(); event.preventDefault(); }  
+    }, { capture: true });
+
     document.getElementById('style_editor_grid').addEventListener('click', function(event){
-        if (event.shiftKey) {
-            if (globalThis.selectedRow) {
-                globalThis.selectedRow.style = globalThis.savedStyle;
-                globalThis.selectedRow = null;
-            }
-            row = event.target.closest("tr");
-            if (row) {
-                globalThis.savedStyle = row.style;
-                globalThis.selectedRow = row;
-                row.style = "background: #333";
-                event.stopImmediatePropagation();
-            }
-        }
+        unselect_row()
     }, { capture: true });
+}
+
+function select_row(row) {
+    globalThis.savedStyle = row.style;
+    globalThis.selectedRow = row;
+    row.style.backgroundColor = "#840";
+}
+
+function unselect_row() {
+    if (globalThis.selectedRow) {
+        globalThis.selectedRow.style = globalThis.savedStyle;
+        globalThis.selectedRow = null;
+    }
 }
 
 function press_refresh_button(tab) {

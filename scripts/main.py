@@ -37,6 +37,13 @@ Suggested workflow:
 - `Extract` the styles to get more manageable files to work with
 - `Merge` the styles after making changes
 """
+  editor_help_text = """
+Click to select a cell. `Ctrl-C`, 'Ctrl-V`, `Ctrl-X` to copy/paste/cut selected cell. 
+
+Doible-click to edit a cell.
+  
+Right-click to select a row, `backspace` or `delete` to delete selected row.
+  """
   cols = ['name','prompt','negative_prompt']
   full_cols = ['sort', 'name','prompt','negative_prompt']
   dataframe:pd.DataFrame = None
@@ -239,6 +246,39 @@ Suggested workflow:
                 cls.tab = tab
               elif tab.id=="txt2img" or tab.id=="img2img":
                 tab.select(fn=None, inputs=tab, _js="press_refresh_button")
+
+class Categories:
+  basedir = scripts.basedir()
+  everything_category = '--All Categories--'
+  try:
+    _default_style_file_path = cmd_opts.styles_file 
+  except:
+    _default_style_file_path = getattr(opts, 'styles_dir', None)
+
+  _additional_style_files_directory = os.path.join(basedir,"additonal_style_files")
+  if not os.path.exists(_additional_style_files_directory):
+    os.mkdir(_additional_style_files_directory)
+  _categories = [everything_category]
+  for f in os.listdir(_additional_style_files_directory):
+    if f.endswith(".csv"):
+      _categories.append(os.path.split(f)[1][:-4])
+
+  @classmethod
+  def add_category(cls, category):
+    if category and category not in cls._categories:
+      cls._categories.append(category)
+
+  @classmethod
+  def list_categories(cls, categories_list=None, exclude_all=False):
+    if categories_list:
+      for category in categories_list:
+        if category not in cls._categories:
+          cls._categories.append(category)
+    return cls._categories[(1 if exclude_all else 0):]
+  
+  @classmethod
+  def filename_to_use(cls, category=None):
+    return os.path.join(cls._additional_style_files_directory, f"{category}.csv") if (category and category!=cls.everything_category) else cls._default_style_file_path
 
 script_callbacks.on_ui_tabs(StyleEditor.on_ui_tabs)
 script_callbacks.on_app_started(StyleEditor.on_app_started)
