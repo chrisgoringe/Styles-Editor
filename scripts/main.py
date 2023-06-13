@@ -20,33 +20,49 @@ class Script(scripts.Script):
     return ()
   
 class StyleEditor:
-  help_text = """Categories (aka additional style files) are a way of breaking up a large style file.
+  help_text = """
+Styles with a name starting `xxxxx::` can be edited in separate additional style files (named `xxxxx.csv`, and stored in the extension's own subdirectory).
 
-Any style with a name of the form `category::style-name` is in category `category`.
+The `Extract` button will update any additional style files to reflect changes made while editing the master style file. To each additional style file (eg `Artists.csv`) 
+will be added all styles with a name starting `Artists::`. Identically named styles will be replaced, other styles in the additional sheet are unchanged.
+
+The `Merge` button will copy all additional styles (from all files) into the master sheet, with the appropriate prefix, 
+and will *remove any styles containing :: which aren't present*.
+
+You can create new additional style files using the `Create` button - the name you give the file will be the prefix.
+
+Suggested workflow:
+- Create additional style files for the categories you want to sort your styles into (eg `Artist`)
+- Edit the main sheet to add `Artist::` to the start of the style name
+- `Extract` the styles to get more manageable files to work with
+- `Merge` the styles after making changes
 """
   cols = ['name','prompt','negative_prompt']
   full_cols = ['sort', 'name','prompt','negative_prompt']
   dataframe:pd.DataFrame = None
   dataeditor = None
-  category = None
-  categories_extracted = False
+  basedir = scripts.basedir()
+  additional_style_files_directory = os.path.join(basedir,"additonal_style_files")
+  try:
+    default_style_file_path = cmd_opts.styles_file 
+  except:
+    default_style_file_path = getattr(opts, 'styles_dir', None)
+  current_styles_file_path = default_style_file_path
+  this_tab_active = False
 
-  @classmethod 
-  def load_style_file(cls, category=None) -> pd.DataFrame:
-    try:
-      df = pd.read_csv(Categories.filename_to_use(category),# engine='python',
-                       header=None, names=cls.cols, skiprows=[0], usecols=[0,1,2])
-    except:
-      df = pd.DataFrame(columns=cls.cols)
-    df.insert(loc=0, column="sort", value=[i+1 for i in range(df.shape[0])])
-    df.fillna('', inplace=True)
-    return df
-    
   @classmethod
   def load_styles(cls):
-    cls.dataframe = cls.load_style_file(cls.category)
+    cls.this_tab_active = True
+    # skip the first line (which has headers) and use our own
+    try:
+      cls.dataframe = pd.read_csv(cls.current_styles_file_path, header=None, names=cls.cols, 
+                                  engine='python', skiprows=[0], usecols=[0,1,2])
+    except:
+      cls.dataframe = pd.DataFrame(columns=cls.cols)
+    cls.dataframe.insert(loc=0, column="sort", value=[i+1 for i in range(cls.dataframe.shape[0])])
+    cls.dataframe.fillna('', inplace=True)
     cls.as_last_saved = cls.dataframe.to_numpy(copy=True)
-    return gr.DataFrame.update(value=cls.dataframe, label=(cls.category or "All Styles"))
+    return cls.dataframe
 
   @staticmethod
   def to_numeric(series:pd.Series):
@@ -56,15 +72,21 @@ Any style with a name of the form `category::style-name` is in category `categor
     return nums
 
   @classmethod
-  def save_styles(cls, data_to_save:pd.DataFrame, category=None):
-    category = category or cls.category
-    data_to_return = data_to_save.drop(index=[i for (i, row) in data_to_save.iterrows() if row[1]=='' and (row[2]!='' or row[3]!='')])
-    data_to_save = data_to_save.drop(index=[i for (i, row) in data_to_save.iterrows() if row[1]==''])
-    data_to_save.to_csv(Categories.filename_to_use(category), encoding="utf-8-sig", columns=cls.cols, index=False)
-    if category is not None and category is not Categories.everything_category and cls.categories_extracted:
-      cls.merge_category_files()
-    prompt_styles.reload()
-    return data_to_return
+  def save_styles(cls, data_to_save:pd.DataFrame, sort_first=False, filepath=None):
+    update_display = True
+    save_as = filepath or cls.current_styles_file_path
+    if sort_first:
+      try:
+        dts = data_to_save.sort_values(by='sort', axis='index', inplace=False, na_position='first', key=cls.to_numeric)
+        data_to_save = dts
+      except:
+        update_display = False
+    if save_as:
+      data_to_save = data_to_save.drop(index=[i for (i, row) in data_to_save.iterrows() if row[1]==''])
+      data_to_save.to_csv(save_as, encoding="utf-8-sig", columns=cls.cols, index=False)
+      if (save_as == cls.default_style_file_path):
+        prompt_styles.reload()
+    return data_to_save if update_display else gr.DataFrame.update()
   
   @classmethod
   def search_and_replace(cls, search:str, replace:str, current_data:pd.DataFrame):
@@ -76,37 +98,51 @@ Any style with a name of the form `category::style-name` is in category `categor
         if isinstance(item,str) and search in item:
           data_np[i][j] = item.replace(search, replace)
     return pd.DataFrame(data=data_np, columns=cls.full_cols)
+
+  @classmethod
+  def relative(cls, filename):
+    return os.path.relpath(os.path.join(cls.additional_style_files_directory,filename))
   
   @classmethod
-  def view_by_category_changed(cls, activate, category):
-    cls.category = category if activate else None
-    if activate:
-      cls.extract_category_files()
-    return gr.Row.update(visible=activate), gr.Dropdown.update(choices=Categories.list_categories(), value=cls.category), cls.load_styles()
+  def use_additional_styles(cls, activate, filename):
+    cls.current_styles_file_path = filename if activate else cls.default_style_file_path
+    return gr.Row.update(visible=activate), cls.load_styles()
   
   @classmethod
-  def create_category(cls, category):
-    Categories.add_category(category)
-    cls.category = category
-    return gr.Dropdown.update(choices=Categories.list_categories(), value=category)
+  def additional_style_files(cls):
+    if not os.path.exists(cls.additional_style_files_directory):
+      os.mkdir(cls.additional_style_files_directory)
+    return ['']+[cls.relative(f) for f in os.listdir(cls.additional_style_files_directory) if f.endswith(".csv")]
   
   @classmethod
-  def select_category(cls, category):
-    cls.category = category
+  def create_style_file(cls, filename):
+    if filename:
+      filename = f"{os.path.splitext(filename)[0]}.csv"
+      filepath = os.path.join(cls.additional_style_files_directory, filename)
+      if not os.path.exists(filepath):
+        print("", file=open(filepath,"w"))
+      return gr.Dropdown.update(choices=cls.additional_style_files(), value=cls.relative(filename))
+    return gr.Dropdown.update()
+  
+  @classmethod
+  def select_style_file(cls, filepath):
+    cls.current_styles_file_path = filepath
     return cls.load_styles() 
   
   @classmethod
-  def merge_category_files(cls):
-    styles_to_save = [row for row in cls.load_style_file().to_numpy() if "::" not in row[1]]
-    for category in Categories.list_categories(exclude_all=True):
-      prefix = category + "::"
-      for row in cls.load_style_file(category).to_numpy():
+  def merge_style_files(cls):
+    purged = [row for row in cls.select_style_file(cls.default_style_file_path).to_numpy() if "::" not in row[1]]
+    for filepath in cls.additional_style_files():
+      prefix = os.path.splitext(os.path.split(filepath)[1])[0] + "::"
+      for row in cls.select_style_file(filepath).to_numpy():
         row[1] = prefix + row[1]
-        styles_to_save.append(row)
-    cls.save_styles(pd.DataFrame(styles_to_save, columns=cls.full_cols), category=Categories.everything_category)
+        purged.append(row)
+    new_df = pd.DataFrame(purged, columns=cls.full_cols)
+    cls.save_styles(new_df, filepath=cls.default_style_file_path)
+    return False
   
   @staticmethod
-  def add_entry(array:np.ndarray, row, prefix:str):
+  def add_or_replace(array:np.ndarray, row, prefix:str):
     row[1] = row[1][len(prefix):]
     for i in range(len(array)):
       if array[i][1] == row[1]:
@@ -115,17 +151,17 @@ Any style with a name of the form `category::style-name` is in category `categor
     return np.vstack([array,row])
 
   @classmethod
-  def extract_category_files(cls):
-    cls.categories_extracted = False
-    prefixed_styles = [row for row in cls.load_style_file().to_numpy() if "::" in row[1]]
-    for category in Categories.list_categories([p[1][:p[1].find('::')] for p in prefixed_styles], exclude_all=True):
-      prefix = category + "::"
-      additional_file_contents = cls.load_style_file(category).to_numpy()
+  def extract_additional_styles(cls):
+    prefixed_styles = [row for row in cls.select_style_file(cls.default_style_file_path).to_numpy() if "::" in row[1]]
+    for filepath in cls.additional_style_files():
+      prefix = os.path.splitext(os.path.split(filepath)[1])[0] + "::"
+      additional_file_contents = cls.select_style_file(filepath).to_numpy()
       for prefixed_style in prefixed_styles:
         if prefixed_style[1].startswith(prefix):
-          additional_file_contents = cls.add_entry(additional_file_contents, prefixed_style, prefix)
-      cls.save_styles(pd.DataFrame(additional_file_contents, columns=cls.full_cols), category=category)
-    cls.categories_extracted = True
+          additional_file_contents = cls.add_or_replace(additional_file_contents, prefixed_style, prefix)
+      cls.save_styles(pd.DataFrame(additional_file_contents, columns=cls.full_cols), filepath=filepath)
+    cls.current_styles_file_path = None
+    return gr.Dropdown.update(choices=cls.additional_style_files(), value=""), cls.load_styles()
   
   @classmethod
   def on_ui_tabs(cls):
@@ -142,17 +178,20 @@ Any style with a name of the form `category::style-name` is in category `categor
       with gr.Row():
         with gr.Column():
           with gr.Row():
-            with gr.Column(scale=1, min_width=100):
-              cls.view_categories_button = gr.Checkbox(value=False, label="View by category")
-            with gr.Column(scale=10, min_width=100):
-              gr.Markdown(value=cls.help_text)
-          with gr.Group(visible=False) as cls.category_display:
+            cls.use_additional_styles_checkbox = gr.Checkbox(value=False, label="Edit additional style files")
+          with gr.Group(visible=False) as cls.additional_file_display:
             with gr.Row():
               with gr.Column(scale=1, min_width=400):
-                cls.category_selection = gr.Dropdown(choices=Categories.list_categories(), value=Categories.everything_category, label="Category")
-                cls.create_additional_category = gr.Button(value="Create new category")
+                cls.style_file_selection = gr.Dropdown(choices=cls.additional_style_files(), value="", label="Additional Style File to Edit")
+              with gr.Column(scale=1, min_width=400):
+                cls.create_additional_stylefile = gr.Button(value="Create new additional style file")
+                cls.split_style_files_button = gr.Button(value="Extract from master")
+                cls.merge_style_files_button = gr.Button(value="Merge into master")
               with gr.Column(scale=10):
                 pass
+            with gr.Row():
+              with gr.Accordion(open=False, label="Help!"):
+                gr.Markdown(value=cls.help_text)     
       with gr.Row():
         with gr.Column(scale=1, min_width=150):
           cls.autosort_checkbox = gr.Checkbox(value=False, label="Autosort")
@@ -161,9 +200,11 @@ Any style with a name of the form `category::style-name` is in category `categor
         with gr.Column(scale=10):
           pass
       with gr.Row():
-        cls.dataeditor = gr.Dataframe(value=cls.load_style_file(), col_count=(len(cls.cols)+1,'fixed'), 
-                                          wrap=True, max_rows=1000, show_label=True, interactive=True, elem_id="style_editor_grid")
- 
+        cls.dataeditor = gr.Dataframe(value=cls.load_styles, col_count=(len(cls.cols)+1,'fixed'), 
+                                          wrap=True, max_rows=1000, show_label=False, interactive=True, elem_id="style_editor_grid")
+
+      #cls.load_button.click(fn=cls.load_styles, outputs=cls.dataeditor)
+      
       cls.search_and_replace_button.click(fn=cls.search_and_replace, inputs=[cls.search_box, cls.replace_box, cls.dataeditor], outputs=cls.dataeditor)
 
       cls.filter_box.change(fn=None, inputs=[cls.filter_box, cls.filter_select], _js="filter_style_list")
@@ -177,9 +218,11 @@ Any style with a name of the form `category::style-name` is in category `categor
 
       style_editor.load(fn=None, _js="when_loaded")
 
-      cls.view_categories_button.change(fn=cls.view_by_category_changed, inputs=[cls.view_categories_button, cls.category_selection], outputs=[cls.category_display, cls.category_selection, cls.dataeditor])
-      cls.create_additional_category.click(fn=cls.create_category, inputs=dummy_component, outputs=cls.category_selection, _js="new_category_dialog")
-      cls.category_selection.change(fn=cls.select_category, inputs=cls.category_selection, outputs=cls.dataeditor)
+      cls.use_additional_styles_checkbox.change(fn=cls.use_additional_styles, inputs=[cls.use_additional_styles_checkbox, cls.style_file_selection], outputs=[cls.additional_file_display, cls.dataeditor])
+      cls.create_additional_stylefile.click(fn=cls.create_style_file, inputs=dummy_component, outputs=cls.style_file_selection, _js="new_style_file_dialog")
+      cls.style_file_selection.change(fn=cls.select_style_file, inputs=cls.style_file_selection, outputs=cls.dataeditor)
+      cls.merge_style_files_button.click(fn=cls.merge_style_files, outputs=cls.use_additional_styles_checkbox)
+      cls.split_style_files_button.click(fn=cls.extract_additional_styles, outputs=[cls.style_file_selection, cls.dataeditor])
 
     return [(style_editor, "Style Editor", "style_editor")]
 
@@ -196,39 +239,5 @@ Any style with a name of the form `category::style-name` is in category `categor
               elif tab.id=="txt2img" or tab.id=="img2img":
                 tab.select(fn=None, inputs=tab, _js="press_refresh_button")
 
-class Categories:
-  basedir = scripts.basedir()
-  everything_category = 'All Categories'
-  try:
-    _default_style_file_path = cmd_opts.styles_file 
-  except:
-    _default_style_file_path = getattr(opts, 'styles_dir', None)
-
-  _additional_style_files_directory = os.path.join(basedir,"additonal_style_files")
-  if not os.path.exists(_additional_style_files_directory):
-    os.mkdir(_additional_style_files_directory)
-  _categories = [everything_category]
-  for f in os.listdir(_additional_style_files_directory):
-    if f.endswith(".csv"):
-      _categories.append(os.path.split(f)[1][:-4])
-
-  @classmethod
-  def add_category(cls, category):
-    if category and category not in cls._categories:
-      cls._categories.append(category)
-
-  @classmethod
-  def list_categories(cls, categories_list=None, exclude_all=False):
-    if categories_list:
-      for category in categories_list:
-        if category not in cls._categories:
-          cls._categories.append(category)
-    return cls._categories[(1 if exclude_all else 0):]
-  
-  @classmethod
-  def filename_to_use(cls, category=None):
-    return os.path.join(cls._additional_style_files_directory, f"{category}.csv") if (category and category!=cls.everything_category) else cls._default_style_file_path
-
 script_callbacks.on_ui_tabs(StyleEditor.on_ui_tabs)
 script_callbacks.on_app_started(StyleEditor.on_app_started)
-
