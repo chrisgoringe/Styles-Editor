@@ -80,8 +80,8 @@ function filter_style_list(filter_text, type) {
     return (filter_text, type);
 }
 
-function new_style_file_dialog(x) {
-    let filename = prompt("New style filename", "");
-    if (filename == null) { filename = "" }
-    return filename;
+function new_category_dialog(x) {
+    let category = prompt("New category", "");
+    if (category == null) { category = "" }
+    return category;
 }
