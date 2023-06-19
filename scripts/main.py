@@ -5,6 +5,8 @@ from modules.shared import cmd_opts, opts, prompt_styles
 import pandas as pd
 import numpy as np
 import os
+from git import Repo
+import json
 
 class Script(scripts.Script):
   def __init__(self) -> None:
@@ -20,28 +22,16 @@ class Script(scripts.Script):
     return ()
   
 class StyleEditor:
-  help_text = """
-Styles with a name starting `xxxxx::` can be edited in separate additional style files (named `xxxxx.csv`, and stored in the extension's own subdirectory).
-
-The `Extract` button will update any additional style files to reflect changes made while editing the master style file. To each additional style file (eg `Artists.csv`) 
-will be added all styles with a name starting `Artists::`. Identically named styles will be replaced, other styles in the additional sheet are unchanged.
-
-The `Merge` button will copy all additional styles (from all files) into the master sheet, with the appropriate prefix, 
-and will *remove any styles containing :: which aren't present*.
-
-You can create new additional style files using the `Create` button - the name you give the file will be the prefix.
-
-Suggested workflow:
-- Create additional style files for the categories you want to sort your styles into (eg `Artist`)
-- Edit the main sheet to add `Artist::` to the start of the style name
-- `Extract` the styles to get more manageable files to work with
-- `Merge` the styles after making changes
+  update_help = """ # Changed in this update:
+- Right-click can be used to select a row in the table (a style)
+- Delete the selected style by pressing `backspace`/`delete`
 """
   cols = ['name','prompt','negative_prompt']
   full_cols = ['sort', 'name','prompt','negative_prompt']
   dataframe:pd.DataFrame = None
   dataeditor = None
   basedir = scripts.basedir()
+  githash = Repo(basedir).git.rev_parse("HEAD")
   additional_style_files_directory = os.path.join(basedir,"additonal_style_files")
   try:
     default_style_file_path = cmd_opts.styles_file 
@@ -171,6 +161,15 @@ Suggested workflow:
     with gr.Blocks(analytics_enabled=False) as style_editor:
       dummy_component = gr.Label(visible=False)
       with gr.Row():
+        try:
+          with open(os.path.join(cls.basedir, "lasthash.json")) as f:
+            lasthash = json.load(f)['lasthash']
+        except:
+          lasthash = ""
+        print(json.dumps({"lasthash":cls.githash}),file=open(os.path.join(cls.basedir, "lasthash.json"), 'w'))
+        if (lasthash!=cls.githash):
+          gr.Markdown(value=cls.update_help)
+      with gr.Row():
         with gr.Column(scale=3, min_width=100):
           cls.filter_box = gr.Textbox(max_lines=1, interactive=True, placeholder="filter", elem_id="style_editor_filter", show_label=False)
           cls.filter_select = gr.Dropdown(choices=["Exact match", "Case insensitive", "regex"], value="Exact match", show_label=False)
@@ -192,9 +191,6 @@ Suggested workflow:
                 cls.merge_style_files_button = gr.Button(value="Merge into master")
               with gr.Column(scale=10):
                 pass
-            with gr.Row():
-              with gr.Accordion(open=False, label="Help!"):
-                gr.Markdown(value=cls.help_text)     
       with gr.Row():
         with gr.Column(scale=1, min_width=150):
           cls.autosort_checkbox = gr.Checkbox(value=False, label="Autosort")
