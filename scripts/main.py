@@ -82,12 +82,14 @@ Suggested workflow:
       except:
         update_display = False
     if save_as:
-      data_to_return = data_to_save.drop(index=[i for (i, row) in data_to_save.iterrows() if row[1]=='' and (row[2]!='' or row[3]!='')])
-      data_to_save = data_to_save.drop(index=[i for (i, row) in data_to_save.iterrows() if row[1]==''])
+      rows_to_drop = [i for (i, row) in data_to_save.iterrows() if row[0]=='!!!']
+      if len(rows_to_drop)>0:
+        data_to_save = data_to_save.drop(index=rows_to_drop)
+        update_display = True
       data_to_save.to_csv(save_as, encoding="utf-8-sig", columns=cls.cols, index=False)
       if (save_as == cls.default_style_file_path):
         prompt_styles.reload()
-    return data_to_return if update_display else gr.DataFrame.update()
+    return data_to_save if update_display else gr.DataFrame.update()
 
   @classmethod
   def search_and_replace(cls, search:str, replace:str, current_data:pd.DataFrame):
