@@ -2,70 +2,45 @@
 
 An extension for Automatic1111 to add a Style Editor, which allows you to view and edit saved styles in a spreadsheet-like format. 
 
+See also:
+- [Recent Changes](./changes.md "Recent Changes")
+- [To Do](/todo.md "To Do")
+- [Additional Style Files](/additional_style_files.md "Working with additional style files")
+
 ## Installation
 
-Put the repository `https://github.com/chrisgoringe/Styles-Editor` in your extensions folder and restart the UI.
+In Automatic1111 you can add this extension through the extensions index.
 
-Or paste that URL into the manual install box.
+Alternatively, paste the url `https://github.com/chrisgoringe/Styles-Editor` into the manual install URL box.
 
-## Usage
+Or clone the repository into your extensions folder.
 
-### Load and view styles
-Click on the `Style Editor` tab. If you need to reload the styles for any reason,  click `Reload Styles`.
+## Basic Usage
 
 ### Edit styles
-Click on any box and it will be highlighted. You can then type and it will replace what was there.
 Double-click in any of the boxes to get an edit cursor within the box.
 
 ### Search and replace
 Enter a search term and a replace term and press the button...
 
 ### Cut, copy, paste
-Ctrl-X, C and V all work as you might expect them to.
+Click on a cell to select it, then use Ctrl-X, C and V.
 
 ### Delete styles
-A style with no name won't be saved. So delete the name (click on the name to highlight the box and hit 'backspace') and then when you save (which happens automatically in the background) the style will be removed. To check, you can use the 'Reload syles' button.
+Right click on a style to select that row. Then hit `backspace` or `delete`. If you are using [additional style files](./additional_style_files.md) you need to delete the style in the additional style file, not the master style file.
 
 ### Add styles
-Use the `New row` button, and then edit the boxes as you need. Note that if you have a filter applied (see below) the new row probably won't appear because it is empty!
+Use the `New row` button, and then edit the boxes as you need. Note that if you have a filter applied the new row probably won't appear because it is empty, so best not to do that.
 
 ### Save styles
-The `Save Styles` button will save the styles, and refresh the styles dropdown menus.
-
-### Add notes
-You can use the notes column for any notes you want to make.
+Styles are saved automatically. If you are using [additional style files](./additional_style_files.md) you need to use the merge files button.
 
 ### Filter view
 Type into the filter text box to only show rows matching the text string. Matches from any of the columns. Filter can be set to Exact match, case insensitive, or regex.
 If filtering by regex, if an invalid regex is entered it will be highlighted in red.
 
 ### Sorting
-The "index" column is automatically generated whenever you save or load. If you edit the value, you can then sort the list by index (using the arrow in the header). 
+The `sort` column is automatically generated whenever you save or load. If you select `autosort` and the table will sort whenever you edit the `sort` value (as long as every value is numeric). 
 
-### Working with additional style files
-If you have a lot of styles you might want to break them up into smaller files. See the instructions in the UI.
-
-## Crawl (it's broken if this isn't done)
-- prevent style titled `blah::` being lost if there isn't an additional style file for them (create it?)
-
-## Walk (definitely want to do)
-- some sort of backup/restore mechanism (every change? keep last X? every 5 minutes if changes?)
-- automatically extract and merge (so editing subfiles is just a view on the master)
-- check that additional style files are preserved on update
-- UI enhancements
-  - When editing additional styles but none selected, hide the table
-  - Better arrangement/styling of buttons (although auto extract/merge will help)
-- eliminate need for `Reload styles` (automatically do it when switching to tab?)
-
-## Run (these might be nice)
-- duplicate style (duplicate a row in the table)
-- swap between multiple style files
-- add style from txt2img or img2img prompts
-- copy selected styles between tabs not just prompt (not really this extension, but a pain)
-- remove duplicate styles (or maybe find similar ones)
-- refresh style lists in UI
-
-## Fly (probably not, but just imagine...)
-- remote sharing of styles in a public database
-
-
+### Backups
+The master style file, and a zip of the additional style files directory, is backed up every ten minutes (with the most recent twelve backups retained) in `extensions/Styles-Editor/backups`
