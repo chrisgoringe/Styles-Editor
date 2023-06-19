@@ -22,9 +22,13 @@ class Script(scripts.Script):
     return ()
   
 class StyleEditor:
-  update_help = """ # Changed in this update:
-- Right-click can be used to select a row in the table (a style)
-- Delete the selected style by pressing `backspace`/`delete`
+  update_help = """ # Plugin updated
+  
+## Changed in this update:
+
+- Right-click can be used to select a row in the table (a style).
+- Delete the selected style by pressing `backspace`/`delete`.
+- Click `new row` with a row selected to duplicate prompt and negative prompt.
 """
   cols = ['name','prompt','negative_prompt']
   full_cols = ['sort', 'name','prompt','negative_prompt']

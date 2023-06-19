@@ -36,8 +36,20 @@ function when_loaded() {
     }, { capture: true });
 
     document.getElementById('style_editor_grid').addEventListener('click', function(event){
-        unselect_row()
+        if (event.target == document.getElementById('style_editor_grid').querySelector("span.button-wrap").querySelector("button") && globalThis.selectedRow) {
+            settimeout( function() {
+                p  = globalThis.selectedRow.querySelectorAll("span")[2].textContent;
+                np = globalThis.selectedRow.querySelectorAll("span")[3].textContent;
+                newRow = document.getElementById('style_editor_grid').querySelector("table").querySelectorAll("tr").slice(-1)[0];
+                update(newRow.querySelectorAll("td")[2], p);
+                update(newRow.querySelectorAll("td")[3], np);
+            }, 100)
+            // wait 100ms then past from selected row to the new row (last)
+        } else {
+            unselect_row();
+        }
     }, { capture: true });
+
 }
 
 function select_row(row) {
