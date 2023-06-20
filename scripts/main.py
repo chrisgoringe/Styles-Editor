@@ -54,6 +54,7 @@ class StyleEditor:
     default_style_file_path = getattr(opts, 'styles_dir', None)
   current_styles_file_path = default_style_file_path
   this_tab_active = False
+  changed_since_backup = True
 
   @classmethod
   def load_styles(cls):
@@ -75,29 +76,43 @@ class StyleEditor:
     if any(nums.isna()):
       raise Exception("don't update display")
     return nums
-
+  
   @classmethod
-  def save_styles(cls, data_to_save:pd.DataFrame, sort_first=False, filepath=None):
-    update_display = True
-    save_as = filepath or cls.current_styles_file_path
-    if sort_first:
+  def sort_dataset(cls, data:pd.DataFrame) -> pd.DataFrame:
       try:
-        dts = data_to_save.sort_values(by='sort', axis='index', inplace=False, na_position='first', key=cls.to_numeric)
-        data_to_save = dts
+        return data.sort_values(by='sort', axis='index', inplace=False, na_position='first', key=cls.to_numeric)
       except:
-        update_display = False
-    if save_as:
-      rows_to_drop = [i for (i, row) in data_to_save.iterrows() if row[0]=='!!!']
-      if len(rows_to_drop)>0:
-        data_to_save = data_to_save.drop(index=rows_to_drop)
-        update_display = True
-      data_to_save.to_csv(save_as, encoding="utf-8-sig", columns=cls.cols, index=False)
-      if (save_as == cls.default_style_file_path):
-        prompt_styles.reload()
-    return data_to_save if update_display else gr.DataFrame.update()
+        return data
+      
+  @classmethod
+  def drop_deleted(cls, data:pd.DataFrame) -> pd.DataFrame:
+    rows_to_drop = [i for (i, row) in data.iterrows() if row[0]=='!!!']
+    return data.drop(index=rows_to_drop)
+      
+  @classmethod
+  def handle_autosort_checkbox_change(cls, data:pd.DataFrame, autosort) -> pd.DataFrame:
+    if autosort:
+      data = cls.sort_dataset(data)
+      cls.save_styles(data)
+    return data
 
   @classmethod
-  def search_and_replace(cls, search:str, replace:str, current_data:pd.DataFrame):
+  def handle_dataeditor_input(cls, data:pd.DataFrame, autosort) -> pd.DataFrame:
+    cls.changed_since_backup = True
+    data = cls.drop_deleted(data)
+    data = cls.sort_dataset(data) if autosort else data
+    cls.save_styles(data)
+    return data
+  
+  @classmethod
+  def save_styles(cls, data:pd.DataFrame, filepath=None):
+    save_as = filepath or cls.current_styles_file_path
+    data.to_csv(save_as, encoding="utf-8-sig", columns=cls.cols, index=False)
+    if (save_as == cls.default_style_file_path):
+      prompt_styles.reload()
+
+  @classmethod
+  def handle_search_and_replace_clicked(cls, search:str, replace:str, current_data:pd.DataFrame):
     if len(search)==0:
       return current_data
     data_np = current_data.to_numpy()
@@ -112,15 +127,18 @@ class StyleEditor:
     return os.path.relpath(os.path.join(cls.additional_style_files_directory,filename))
   
   @classmethod
-  def use_additional_styles_box_changed(cls, activate, filename):
+  def handle_use_additional_styles_box_changed(cls, activate, filename):
     cls.current_styles_file_path = filename if activate else cls.default_style_file_path
     if activate:
       cls.extract_additional_styles()
     return gr.Row.update(visible=activate), cls.load_styles()
   
   @classmethod
-  def additional_style_files(cls):
-    return ['']+[cls.relative(f) for f in os.listdir(cls.additional_style_files_directory) if f.endswith(".csv")]
+  def additional_style_files(cls, include_blank=True):
+    if include_blank:
+      return ['']+[cls.relative(f) for f in os.listdir(cls.additional_style_files_directory) if f.endswith(".csv")]
+    else:
+      return [cls.relative(f) for f in os.listdir(cls.additional_style_files_directory) if f.endswith(".csv")]
   
   @classmethod
   def create_style_file(cls, filename):
@@ -140,7 +158,7 @@ class StyleEditor:
   @classmethod
   def merge_style_files(cls):
     purged = [row for row in cls.select_style_file(cls.default_style_file_path).to_numpy() if "::" not in row[1]]
-    for filepath in cls.additional_style_files():
+    for filepath in cls.additional_style_files(False):
       prefix = os.path.splitext(os.path.split(filepath)[1])[0] + "::"
       for row in cls.select_style_file(filepath).to_numpy():
         row[1] = prefix + row[1]
@@ -161,7 +179,7 @@ class StyleEditor:
   @classmethod
   def extract_additional_styles(cls):
     prefixed_styles = [row for row in cls.select_style_file(cls.default_style_file_path).to_numpy() if "::" in row[1]]
-    for filepath in cls.additional_style_files():
+    for filepath in cls.additional_style_files(False):
       prefix = os.path.splitext(os.path.split(filepath)[1])[0] + "::"
       additional_file_contents = cls.select_style_file(filepath).to_numpy()
       for prefixed_style in prefixed_styles:
@@ -183,12 +201,15 @@ class StyleEditor:
   
   @classmethod
   def do_backup(cls):
+    if not cls.changed_since_backup:
+      return
     fileroot = os.path.join(cls.backup_directory, datetime.datetime.now().strftime("%y%m%d_%H%M"))
     shutil.copyfile(cls.default_style_file_path, fileroot+".csv")
     shutil.make_archive(fileroot,format="zip",root_dir=cls.additional_style_files_directory,base_dir='.')
     paths = sorted(Path(cls.backup_directory).iterdir(), key=os.path.getmtime, reverse=True)
     for path in paths[24:]:
       os.remove(str(path))
+    cls.changed_since_backup = False
 
   @classmethod
   def on_ui_tabs(cls):
@@ -231,20 +252,20 @@ class StyleEditor:
         cls.dataeditor = gr.Dataframe(value=cls.load_styles, col_count=(len(cls.cols)+1,'fixed'), 
                                           wrap=True, max_rows=1000, show_label=False, interactive=True, elem_id="style_editor_grid")
       
-      cls.search_and_replace_button.click(fn=cls.search_and_replace, inputs=[cls.search_box, cls.replace_box, cls.dataeditor], outputs=cls.dataeditor)
+      cls.search_and_replace_button.click(fn=cls.handle_search_and_replace_clicked, inputs=[cls.search_box, cls.replace_box, cls.dataeditor], outputs=cls.dataeditor)
 
       cls.filter_box.change(fn=None, inputs=[cls.filter_box, cls.filter_select], _js="filter_style_list")
       cls.filter_select.change(fn=None, inputs=[cls.filter_box, cls.filter_select], _js="filter_style_list")
 
       cls.dataeditor.change(fn=None, inputs=[cls.filter_box, cls.filter_select], _js="filter_style_list")
 
-      cls.dataeditor.input(fn=cls.save_styles, inputs=[cls.dataeditor, cls.autosort_checkbox], outputs=cls.dataeditor)
-      cls.autosort_checkbox.change(fn=cls.save_styles, inputs=[cls.dataeditor, cls.autosort_checkbox], outputs=cls.dataeditor)
+      cls.dataeditor.input(fn=cls.handle_dataeditor_input, inputs=[cls.dataeditor, cls.autosort_checkbox], outputs=cls.dataeditor)
+      cls.autosort_checkbox.change(fn=cls.handle_autosort_checkbox_change, inputs=[cls.dataeditor, cls.autosort_checkbox], outputs=cls.dataeditor)
 
       style_editor.load(fn=None, _js="when_loaded")
       style_editor.load(fn=cls.do_backup, inputs=[], outputs=[], every=600)
 
-      cls.use_additional_styles_checkbox.change(fn=cls.use_additional_styles_box_changed, inputs=[cls.use_additional_styles_checkbox, cls.style_file_selection], outputs=[cls.additional_file_display, cls.dataeditor])
+      cls.use_additional_styles_checkbox.change(fn=cls.handle_use_additional_styles_box_changed, inputs=[cls.use_additional_styles_checkbox, cls.style_file_selection], outputs=[cls.additional_file_display, cls.dataeditor])
       cls.create_additional_stylefile.click(fn=cls.create_style_file, inputs=dummy_component, outputs=cls.style_file_selection, _js="new_style_file_dialog")
       cls.style_file_selection.change(fn=cls.select_style_file, inputs=cls.style_file_selection, outputs=cls.dataeditor)
       cls.merge_style_files_button.click(fn=cls.merge_style_files, outputs=cls.use_additional_styles_checkbox)
