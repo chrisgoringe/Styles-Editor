@@ -1,7 +1,7 @@
 # Recent changes
 
 ## 20 June 2023
-- Regular backups created in `extensions/Styles-Editor/backups` (saved every ten minutes, last 12 retained)
+- Regular backups created in `extensions/Styles-Editor/backups` (saved every ten minutes if changes have been made, last 12 retained)
 - Updated most of the documentation
 - Removed `Renumber Sort Column` button (just switch tabs and switch back!)
 - Removed `Extract from Master` button (automatically done when you go into additional style files view)
