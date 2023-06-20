@@ -7,6 +7,9 @@ import numpy as np
 import os
 from git import Repo
 import json
+import shutil
+import datetime
+from pathlib import Path
 
 class Script(scripts.Script):
   def __init__(self) -> None:
@@ -22,7 +25,14 @@ class Script(scripts.Script):
     return ()
   
 class StyleEditor:
-  update_help = """ # Changed in this update:
+  update_help = """# Recent changes:
+## Changed in this update:
+- Regular backups created in `extensions/Styles-Editor/backups`
+- Updated documentation
+- Removed `Renumber Sort Column` button (just switch tabs and switch back!)
+- Removed `Extract from Master` button (automatically done when you go into additional style files view)
+
+## Changed in recent updates:
 - Right-click can be used to select a row in the table (a style)
 - Delete the selected style by pressing `backspace`/`delete`
 """
@@ -33,6 +43,11 @@ class StyleEditor:
   basedir = scripts.basedir()
   githash = Repo(basedir).git.rev_parse("HEAD")
   additional_style_files_directory = os.path.join(basedir,"additonal_style_files")
+  backup_directory = os.path.join(basedir,"backups")
+  if not os.path.exists(additional_style_files_directory):
+    os.mkdir(additional_style_files_directory)
+  if not os.path.exists(backup_directory):
+    os.mkdir(backup_directory)
   try:
     default_style_file_path = cmd_opts.styles_file 
   except:
@@ -97,14 +112,14 @@ class StyleEditor:
     return os.path.relpath(os.path.join(cls.additional_style_files_directory,filename))
   
   @classmethod
-  def use_additional_styles(cls, activate, filename):
+  def use_additional_styles_box_changed(cls, activate, filename):
     cls.current_styles_file_path = filename if activate else cls.default_style_file_path
+    if activate:
+      cls.extract_additional_styles()
     return gr.Row.update(visible=activate), cls.load_styles()
   
   @classmethod
   def additional_style_files(cls):
-    if not os.path.exists(cls.additional_style_files_directory):
-      os.mkdir(cls.additional_style_files_directory)
     return ['']+[cls.relative(f) for f in os.listdir(cls.additional_style_files_directory) if f.endswith(".csv")]
   
   @classmethod
@@ -157,18 +172,35 @@ class StyleEditor:
     return gr.Dropdown.update(choices=cls.additional_style_files(), value=""), cls.load_styles()
   
   @classmethod
+  def get_and_update_lasthash(cls) -> str:
+    try:
+      with open(os.path.join(cls.basedir, "lasthash.json")) as f:
+        lasthash = json.load(f)['lasthash']
+    except:
+      lasthash = ""
+    print(json.dumps({"lasthash":cls.githash}),file=open(os.path.join(cls.basedir, "lasthash.json"), 'w'))
+    return lasthash
+  
+  @classmethod
+  def do_backup(cls):
+    fileroot = os.path.join(cls.backup_directory, datetime.datetime.now().strftime("%y%m%d_%H%M"))
+    shutil.copyfile(cls.default_style_file_path, fileroot+".csv")
+    shutil.make_archive(fileroot,format="zip",root_dir=cls.additional_style_files_directory,base_dir='.')
+    paths = sorted(Path(cls.backup_directory).iterdir(), key=os.path.getmtime, reverse=True)
+    for path in paths[24:]:
+      os.remove(str(path))
+
+  @classmethod
   def on_ui_tabs(cls):
     with gr.Blocks(analytics_enabled=False) as style_editor:
       dummy_component = gr.Label(visible=False)
       with gr.Row():
-        try:
-          with open(os.path.join(cls.basedir, "lasthash.json")) as f:
-            lasthash = json.load(f)['lasthash']
-        except:
-          lasthash = ""
-        print(json.dumps({"lasthash":cls.githash}),file=open(os.path.join(cls.basedir, "lasthash.json"), 'w'))
-        if (lasthash!=cls.githash):
-          gr.Markdown(value=cls.update_help)
+        with gr.Column(scale=1, min_width=400):
+          with gr.Accordion(label="Documentation and Recent Changes", open=(cls.get_and_update_lasthash()!=cls.githash)):
+            gr.HTML(value="<a href='https://github.com/chrisgoringe/Styles-Editor/blob/main/readme.md' target='_blank'>Link to Documentation</a>")
+            gr.Markdown(value=cls.update_help)
+        with gr.Column(scale=10):
+          pass
       with gr.Row():
         with gr.Column(scale=3, min_width=100):
           cls.filter_box = gr.Textbox(max_lines=1, interactive=True, placeholder="filter", elem_id="style_editor_filter", show_label=False)
@@ -187,22 +219,17 @@ class StyleEditor:
                 cls.style_file_selection = gr.Dropdown(choices=cls.additional_style_files(), value="", label="Additional Style File to Edit")
               with gr.Column(scale=1, min_width=400):
                 cls.create_additional_stylefile = gr.Button(value="Create new additional style file")
-                cls.split_style_files_button = gr.Button(value="Extract from master")
                 cls.merge_style_files_button = gr.Button(value="Merge into master")
               with gr.Column(scale=10):
                 pass
       with gr.Row():
         with gr.Column(scale=1, min_width=150):
           cls.autosort_checkbox = gr.Checkbox(value=False, label="Autosort")
-        with gr.Column(scale=1, min_width=250):
-          cls.fix_sort_column_button = gr.Button(value="Renumber sort columm")
         with gr.Column(scale=10):
           pass
       with gr.Row():
         cls.dataeditor = gr.Dataframe(value=cls.load_styles, col_count=(len(cls.cols)+1,'fixed'), 
                                           wrap=True, max_rows=1000, show_label=False, interactive=True, elem_id="style_editor_grid")
-
-      #cls.load_button.click(fn=cls.load_styles, outputs=cls.dataeditor)
       
       cls.search_and_replace_button.click(fn=cls.search_and_replace, inputs=[cls.search_box, cls.replace_box, cls.dataeditor], outputs=cls.dataeditor)
 
@@ -213,15 +240,14 @@ class StyleEditor:
 
       cls.dataeditor.input(fn=cls.save_styles, inputs=[cls.dataeditor, cls.autosort_checkbox], outputs=cls.dataeditor)
       cls.autosort_checkbox.change(fn=cls.save_styles, inputs=[cls.dataeditor, cls.autosort_checkbox], outputs=cls.dataeditor)
-      cls.fix_sort_column_button.click(fn=cls.load_styles, outputs=cls.dataeditor)
 
       style_editor.load(fn=None, _js="when_loaded")
+      style_editor.load(fn=cls.do_backup, inputs=[], outputs=[], every=600)
 
-      cls.use_additional_styles_checkbox.change(fn=cls.use_additional_styles, inputs=[cls.use_additional_styles_checkbox, cls.style_file_selection], outputs=[cls.additional_file_display, cls.dataeditor])
+      cls.use_additional_styles_checkbox.change(fn=cls.use_additional_styles_box_changed, inputs=[cls.use_additional_styles_checkbox, cls.style_file_selection], outputs=[cls.additional_file_display, cls.dataeditor])
       cls.create_additional_stylefile.click(fn=cls.create_style_file, inputs=dummy_component, outputs=cls.style_file_selection, _js="new_style_file_dialog")
       cls.style_file_selection.change(fn=cls.select_style_file, inputs=cls.style_file_selection, outputs=cls.dataeditor)
       cls.merge_style_files_button.click(fn=cls.merge_style_files, outputs=cls.use_additional_styles_checkbox)
-      cls.split_style_files_button.click(fn=cls.extract_additional_styles, outputs=[cls.style_file_selection, cls.dataeditor])
 
     return [(style_editor, "Style Editor", "style_editor")]
 

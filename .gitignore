@@ -154,3 +154,4 @@ scripts/Styles-Editor.code-workspace
 *.csv
 test.py
 lasthash.json
+backups/
