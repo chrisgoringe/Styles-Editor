@@ -134,8 +134,11 @@ class StyleEditor:
     return gr.Row.update(visible=activate), cls.load_styles()
   
   @classmethod
-  def additional_style_files(cls):
-    return ['']+[cls.relative(f) for f in os.listdir(cls.additional_style_files_directory) if f.endswith(".csv")]
+  def additional_style_files(cls, include_blank=True):
+    if include_blank:
+      return ['']+[cls.relative(f) for f in os.listdir(cls.additional_style_files_directory) if f.endswith(".csv")]
+    else:
+      return [cls.relative(f) for f in os.listdir(cls.additional_style_files_directory) if f.endswith(".csv")]
   
   @classmethod
   def create_style_file(cls, filename):
@@ -155,7 +158,7 @@ class StyleEditor:
   @classmethod
   def merge_style_files(cls):
     purged = [row for row in cls.select_style_file(cls.default_style_file_path).to_numpy() if "::" not in row[1]]
-    for filepath in cls.additional_style_files():
+    for filepath in cls.additional_style_files(False):
       prefix = os.path.splitext(os.path.split(filepath)[1])[0] + "::"
       for row in cls.select_style_file(filepath).to_numpy():
         row[1] = prefix + row[1]
@@ -176,7 +179,7 @@ class StyleEditor:
   @classmethod
   def extract_additional_styles(cls):
     prefixed_styles = [row for row in cls.select_style_file(cls.default_style_file_path).to_numpy() if "::" in row[1]]
-    for filepath in cls.additional_style_files():
+    for filepath in cls.additional_style_files(False):
       prefix = os.path.splitext(os.path.split(filepath)[1])[0] + "::"
       additional_file_contents = cls.select_style_file(filepath).to_numpy()
       for prefixed_style in prefixed_styles:
