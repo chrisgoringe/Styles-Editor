@@ -27,18 +27,18 @@ class Script(scripts.Script):
 class StyleEditor:
   update_help = """# Recent changes:
 ## Changed in this update:
-- Automatically create new Additional Style Files if needed
-- Automatically delete empty Additional Style Files on merge
+- Restored the `notes` column
 
 ## Changed in recent updates:
+- Automatically create new Additional Style Files if needed
+- Automatically delete empty Additional Style Files on merge
 - Regular backups created in `extensions/Styles-Editor/backups`
-- Updated documentation
 - Removed `Renumber Sort Column` button (just switch tabs and switch back!)
 - Removed `Extract from Master` button (automatically done when you go into additional style files view)- Right-click can be used to select a row in the table (a style)
 - Delete the selected style by pressing `backspace`/`delete`
 """
   cols = ['name','prompt','negative_prompt']
-  full_cols = ['sort', 'name','prompt','negative_prompt']
+  full_cols = ['sort', 'name','prompt','negative_prompt','notes']
   dataeditor = None
   basedir = scripts.basedir()
   githash = Repo(basedir).git.rev_parse("HEAD")
@@ -54,6 +54,26 @@ class StyleEditor:
     default_style_file_path = getattr(opts, 'styles_dir', None)
   current_styles_file_path = default_style_file_path
   changed_since_backup = True
+  try:
+    with open(os.path.join(basedir, "notes.json")) as f:
+      notes_dictionary = json.load(f)
+  except:
+    notes_dictionary = {}
+  
+  @classmethod
+  def save_notes_dictionary(cls):
+    print(json.dumps(cls.notes_dictionary),file=open(os.path.join(cls.basedir, "notes.json"), 'w'))   
+
+  @classmethod
+  def update_notes_dictionary(cls, data:pd.DataFrame, prefix:str):
+    for row in data.iterrows():
+      stylename = prefix+"::"+row[1][1] if prefix!='' else row[1][1]
+      cls.notes_dictionary[stylename] = row[1][4]
+
+  @classmethod
+  def lookup_notes(cls, stylename, prefix):
+    stylename = prefix+"::"+stylename if prefix!='' else stylename
+    return cls.notes_dictionary[stylename] if stylename in cls.notes_dictionary else ''
 
   @classmethod
   def load_styles(cls, file=None):
@@ -64,7 +84,10 @@ class StyleEditor:
                                   engine='python', skiprows=[0], usecols=[0,1,2])
     except:
       dataframe = pd.DataFrame(columns=cls.cols)
-    dataframe.insert(loc=0, column="sort", value=[i+1 for i in range(dataframe.shape[0])])
+    display = cls.display_name(file)
+    entries = range(dataframe.shape[0])
+    dataframe.insert(loc=0, column="sort", value=[i+1 for i in entries])
+    dataframe.insert(loc=4, column="notes", value=[cls.lookup_notes(dataframe['name'][i], display) for i in entries])
     dataframe.fillna('', inplace=True)
     return dataframe
 
@@ -108,6 +131,8 @@ class StyleEditor:
     data.to_csv(save_as, encoding="utf-8-sig", columns=cls.cols, index=False)
     if (save_as == cls.default_style_file_path):
       prompt_styles.reload()
+    cls.update_notes_dictionary(data, cls.display_name(save_as))
+    cls.save_notes_dictionary()
 
   @classmethod
   def handle_search_and_replace_click(cls, search:str, replace:str, current_data:pd.DataFrame):
@@ -143,10 +168,13 @@ class StyleEditor:
   
   @classmethod
   def handle_use_additional_styles_box_change(cls, activate, filename):
-    cls.current_styles_file_path = filename if activate else cls.default_style_file_path
+    cls.current_styles_file_path = cls.full_path(filename) if activate else cls.default_style_file_path
     if activate:
       cls.extract_additional_styles()
-    return gr.Row.update(visible=activate), cls.load_styles(), gr.Dropdown.update(choices=cls.additional_style_files(display_names=True), value=cls.display_name(filename))
+      return gr.Row.update(visible=activate), cls.load_styles(), gr.Dropdown.update(choices=cls.additional_style_files(display_names=True), 
+                                                                                  value=cls.display_name(cls.current_styles_file_path))
+    else:
+      return gr.Row.update(visible=activate), cls.load_styles(), gr.Dropdown.update()
   
   @classmethod
   def additional_style_files(cls, include_blank=True, display_names=False):
@@ -197,18 +225,16 @@ class StyleEditor:
 
   @classmethod
   def extract_additional_styles(cls):
-    prefixed_styles = [row for row in cls.handle_style_file_selection_change(cls.default_style_file_path).to_numpy() if "::" in row[1]]
+    prefixed_styles = [row for row in cls.load_styles(cls.default_style_file_path).to_numpy() if "::" in row[1]]
     for prefix in {row[1][:row[1].find('::')] for row in prefixed_styles}:
       cls.create_file_if_missing(prefix)
     for filepath in cls.additional_style_files(include_blank=False):
       prefix = os.path.splitext(os.path.split(filepath)[1])[0] + "::"
-      additional_file_contents = cls.handle_style_file_selection_change(filepath).to_numpy()
+      additional_file_contents = cls.load_styles(cls.full_path(filepath)).to_numpy()
       for prefixed_style in prefixed_styles:
         if prefixed_style[1].startswith(prefix):
           additional_file_contents = cls.add_or_replace(additional_file_contents, prefixed_style, prefix)
       cls.save_styles(pd.DataFrame(additional_file_contents, columns=cls.full_cols), filepath=filepath)
-    cls.current_styles_file_path = None
-    return gr.Dropdown.update(choices=cls.additional_style_files(display_names=True), value=""), cls.load_styles()
   
   @classmethod
   def get_and_update_lasthash(cls) -> str:
@@ -271,7 +297,7 @@ class StyleEditor:
         with gr.Column(scale=10):
           pass
       with gr.Row():
-        cls.dataeditor = gr.Dataframe(value=cls.load_styles, col_count=(len(cls.cols)+1,'fixed'), 
+        cls.dataeditor = gr.Dataframe(value=cls.load_styles, col_count=(len(cls.full_cols),'fixed'), 
                                           wrap=True, max_rows=1000, show_label=False, interactive=True, elem_id="style_editor_grid")
       
       cls.search_and_replace_button.click(fn=cls.handle_search_and_replace_click, inputs=[cls.search_box, cls.replace_box, cls.dataeditor], outputs=cls.dataeditor)

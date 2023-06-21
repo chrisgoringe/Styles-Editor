@@ -1,7 +1,6 @@
 # Things I hope to add
 
 ## Crawl (it's broken if this isn't done)
-- prevent style titled `blah::` being lost if there isn't an additional style file for them [Issue 44](https://github.com/chrisgoringe/Styles-Editor/issues/44)
 
 ## Walk (definitely want to do)
 - When editing additional styles but none selected, hide the table
