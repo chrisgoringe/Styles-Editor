@@ -28,6 +28,7 @@ class StyleEditor:
   update_help = """# Recent changes:
 ## Changed in this update:
 - Automatically create new Additional Style Files if needed
+- Automatically delete empty Additional Style Files on merge
 
 ## Changed in recent updates:
 - Regular backups created in `extensions/Styles-Editor/backups`
@@ -38,7 +39,6 @@ class StyleEditor:
 """
   cols = ['name','prompt','negative_prompt']
   full_cols = ['sort', 'name','prompt','negative_prompt']
-  dataframe:pd.DataFrame = None
   dataeditor = None
   basedir = scripts.basedir()
   githash = Repo(basedir).git.rev_parse("HEAD")
@@ -53,22 +53,20 @@ class StyleEditor:
   except:
     default_style_file_path = getattr(opts, 'styles_dir', None)
   current_styles_file_path = default_style_file_path
-  this_tab_active = False
   changed_since_backup = True
 
   @classmethod
-  def load_styles(cls):
-    cls.this_tab_active = True
+  def load_styles(cls, file=None):
     # skip the first line (which has headers) and use our own
+    file = file or cls.current_styles_file_path
     try:
-      cls.dataframe = pd.read_csv(cls.current_styles_file_path, header=None, names=cls.cols, 
+      dataframe = pd.read_csv(file, header=None, names=cls.cols, 
                                   engine='python', skiprows=[0], usecols=[0,1,2])
     except:
-      cls.dataframe = pd.DataFrame(columns=cls.cols)
-    cls.dataframe.insert(loc=0, column="sort", value=[i+1 for i in range(cls.dataframe.shape[0])])
-    cls.dataframe.fillna('', inplace=True)
-    cls.as_last_saved = cls.dataframe.to_numpy(copy=True)
-    return cls.dataframe
+      dataframe = pd.DataFrame(columns=cls.cols)
+    dataframe.insert(loc=0, column="sort", value=[i+1 for i in range(dataframe.shape[0])])
+    dataframe.fillna('', inplace=True)
+    return dataframe
 
   @staticmethod
   def to_numeric(series:pd.Series):
@@ -174,12 +172,16 @@ class StyleEditor:
   
   @classmethod
   def handle_merge_style_files_click(cls):
-    purged = [row for row in cls.handle_style_file_selection_change(cls.default_style_file_path).to_numpy() if "::" not in row[1]]
+    purged = [row for row in cls.load_styles(cls.default_style_file_path).to_numpy() if "::" not in row[1]]
     for filepath in cls.additional_style_files(include_blank=False):
-      prefix = os.path.splitext(os.path.split(filepath)[1])[0] + "::"
-      for row in cls.handle_style_file_selection_change(filepath).to_numpy():
-        row[1] = prefix + row[1]
-        purged.append(row)
+      rows = cls.load_styles(filepath).to_numpy()
+      if len(rows)>0:
+        prefix = cls.display_name(filepath) + "::"
+        for row in rows:
+          row[1] = prefix + row[1]
+          purged.append(row)
+      else:
+        os.remove(filepath)
     new_df = pd.DataFrame(purged, columns=cls.full_cols)
     cls.save_styles(new_df, filepath=cls.default_style_file_path)
     return False
