@@ -44,3 +44,6 @@ The `sort` column is automatically generated whenever you save or load. If you s
 
 ### Backups
 The master style file, and a zip of the additional style files directory, is backed up every ten minutes (with the most recent twelve backups retained) in `extensions/Styles-Editor/backups`
+
+### Stargazers
+Thanks to those who've starred this - 20 as of 21 June 2023.
