@@ -171,8 +171,10 @@ class StyleEditor:
     cls.current_styles_file_path = cls.full_path(filename) if activate else cls.default_style_file_path
     if activate:
       cls.extract_additional_styles()
-      return gr.Row.update(visible=activate), cls.load_styles(), gr.Dropdown.update(choices=cls.additional_style_files(display_names=True), 
-                                                                                  value=cls.display_name(cls.current_styles_file_path))
+      labels = cls.additional_style_files(display_names=True, include_blank=False)
+      selected = cls.display_name(cls.current_styles_file_path)
+      selected = selected if selected in labels else labels[0] if len(labels)>0 else ''
+      return gr.Row.update(visible=activate), cls.load_styles(), gr.Dropdown.update(choices=labels, value=selected)
     else:
       return gr.Row.update(visible=activate), cls.load_styles(), gr.Dropdown.update()
   
