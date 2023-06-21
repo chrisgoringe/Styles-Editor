@@ -27,18 +27,18 @@ class Script(scripts.Script):
 class StyleEditor:
   update_help = """# Recent changes:
 ## Changed in this update:
+- Automatically create new Additional Style Files if needed
+- Automatically delete empty Additional Style Files on merge
+
+## Changed in recent updates:
 - Regular backups created in `extensions/Styles-Editor/backups`
 - Updated documentation
 - Removed `Renumber Sort Column` button (just switch tabs and switch back!)
-- Removed `Extract from Master` button (automatically done when you go into additional style files view)
-
-## Changed in recent updates:
-- Right-click can be used to select a row in the table (a style)
+- Removed `Extract from Master` button (automatically done when you go into additional style files view)- Right-click can be used to select a row in the table (a style)
 - Delete the selected style by pressing `backspace`/`delete`
 """
   cols = ['name','prompt','negative_prompt']
   full_cols = ['sort', 'name','prompt','negative_prompt']
-  dataframe:pd.DataFrame = None
   dataeditor = None
   basedir = scripts.basedir()
   githash = Repo(basedir).git.rev_parse("HEAD")
@@ -53,22 +53,20 @@ class StyleEditor:
   except:
     default_style_file_path = getattr(opts, 'styles_dir', None)
   current_styles_file_path = default_style_file_path
-  this_tab_active = False
   changed_since_backup = True
 
   @classmethod
-  def load_styles(cls):
-    cls.this_tab_active = True
+  def load_styles(cls, file=None):
     # skip the first line (which has headers) and use our own
+    file = file or cls.current_styles_file_path
     try:
-      cls.dataframe = pd.read_csv(cls.current_styles_file_path, header=None, names=cls.cols, 
+      dataframe = pd.read_csv(file, header=None, names=cls.cols, 
                                   engine='python', skiprows=[0], usecols=[0,1,2])
     except:
-      cls.dataframe = pd.DataFrame(columns=cls.cols)
-    cls.dataframe.insert(loc=0, column="sort", value=[i+1 for i in range(cls.dataframe.shape[0])])
-    cls.dataframe.fillna('', inplace=True)
-    cls.as_last_saved = cls.dataframe.to_numpy(copy=True)
-    return cls.dataframe
+      dataframe = pd.DataFrame(columns=cls.cols)
+    dataframe.insert(loc=0, column="sort", value=[i+1 for i in range(dataframe.shape[0])])
+    dataframe.fillna('', inplace=True)
+    return dataframe
 
   @staticmethod
   def to_numeric(series:pd.Series):
@@ -112,7 +110,7 @@ class StyleEditor:
       prompt_styles.reload()
 
   @classmethod
-  def handle_search_and_replace_clicked(cls, search:str, replace:str, current_data:pd.DataFrame):
+  def handle_search_and_replace_click(cls, search:str, replace:str, current_data:pd.DataFrame):
     if len(search)==0:
       return current_data
     data_np = current_data.to_numpy()
@@ -123,46 +121,67 @@ class StyleEditor:
     return pd.DataFrame(data=data_np, columns=cls.full_cols)
 
   @classmethod
-  def relative(cls, filename):
-    return os.path.relpath(os.path.join(cls.additional_style_files_directory,filename))
+  def full_path(cls, filename:str) -> str:
+    """
+    Return the full path for an additional style file.
+    Input can be the full path, the filename with extension, or the filename without extension.
+    If input is None, '', or the default style file path, return the default style file path
+    """
+    if filename is None or filename=='' or filename==cls.default_style_file_path:
+      return cls.default_style_file_path
+    filename = filename+".csv" if not filename.endswith(".csv") else filename
+    return os.path.relpath(os.path.join(cls.additional_style_files_directory,os.path.split(filename)[1]))
+                           
+  @classmethod
+  def display_name(cls, filename:str) -> str:
+    """
+    Return the full path for an additional style file. 
+    Input can be the full path, the filename with extension, or the filename without extension
+    """
+    fullpath = cls.full_path(filename)
+    return os.path.splitext(os.path.split(fullpath)[1])[0] if fullpath!=cls.default_style_file_path else ''
   
   @classmethod
-  def handle_use_additional_styles_box_changed(cls, activate, filename):
+  def handle_use_additional_styles_box_change(cls, activate, filename):
     cls.current_styles_file_path = filename if activate else cls.default_style_file_path
     if activate:
       cls.extract_additional_styles()
-    return gr.Row.update(visible=activate), cls.load_styles()
+    return gr.Row.update(visible=activate), cls.load_styles(), gr.Dropdown.update(choices=cls.additional_style_files(display_names=True), value=cls.display_name(filename))
   
   @classmethod
-  def additional_style_files(cls, include_blank=True):
-    if include_blank:
-      return ['']+[cls.relative(f) for f in os.listdir(cls.additional_style_files_directory) if f.endswith(".csv")]
-    else:
-      return [cls.relative(f) for f in os.listdir(cls.additional_style_files_directory) if f.endswith(".csv")]
+  def additional_style_files(cls, include_blank=True, display_names=False):
+    format = cls.display_name if display_names else cls.full_path
+    asf = [format(f) for f in os.listdir(cls.additional_style_files_directory) if f.endswith(".csv")]
+    return [format('')]+asf if include_blank else asf
   
   @classmethod
-  def create_style_file(cls, filename):
-    if filename:
-      filename = f"{os.path.splitext(filename)[0]}.csv"
-      filepath = os.path.join(cls.additional_style_files_directory, filename)
-      if not os.path.exists(filepath):
-        print("", file=open(filepath,"w"))
-      return gr.Dropdown.update(choices=cls.additional_style_files(), value=cls.relative(filename))
-    return gr.Dropdown.update()
+  def create_file_if_missing(cls, filename):
+    filename = cls.full_path(filename)
+    if not os.path.exists(filename):
+      print("", file=open(filename,"w"))
+
+  @classmethod
+  def handle_create_additional_style_file_click(cls, name):
+    cls.create_file_if_missing(name)
+    return gr.Dropdown.update(choices=cls.additional_style_files(display_names=True), value=cls.display_name(name))
   
   @classmethod
-  def select_style_file(cls, filepath):
-    cls.current_styles_file_path = filepath
+  def handle_style_file_selection_change(cls, filepath):
+    cls.current_styles_file_path = cls.full_path(filepath)
     return cls.load_styles() 
   
   @classmethod
-  def merge_style_files(cls):
-    purged = [row for row in cls.select_style_file(cls.default_style_file_path).to_numpy() if "::" not in row[1]]
-    for filepath in cls.additional_style_files(False):
-      prefix = os.path.splitext(os.path.split(filepath)[1])[0] + "::"
-      for row in cls.select_style_file(filepath).to_numpy():
-        row[1] = prefix + row[1]
-        purged.append(row)
+  def handle_merge_style_files_click(cls):
+    purged = [row for row in cls.load_styles(cls.default_style_file_path).to_numpy() if "::" not in row[1]]
+    for filepath in cls.additional_style_files(include_blank=False):
+      rows = cls.load_styles(filepath).to_numpy()
+      if len(rows)>0:
+        prefix = cls.display_name(filepath) + "::"
+        for row in rows:
+          row[1] = prefix + row[1]
+          purged.append(row)
+      else:
+        os.remove(filepath)
     new_df = pd.DataFrame(purged, columns=cls.full_cols)
     cls.save_styles(new_df, filepath=cls.default_style_file_path)
     return False
@@ -178,16 +197,18 @@ class StyleEditor:
 
   @classmethod
   def extract_additional_styles(cls):
-    prefixed_styles = [row for row in cls.select_style_file(cls.default_style_file_path).to_numpy() if "::" in row[1]]
-    for filepath in cls.additional_style_files(False):
+    prefixed_styles = [row for row in cls.handle_style_file_selection_change(cls.default_style_file_path).to_numpy() if "::" in row[1]]
+    for prefix in {row[1][:row[1].find('::')] for row in prefixed_styles}:
+      cls.create_file_if_missing(prefix)
+    for filepath in cls.additional_style_files(include_blank=False):
       prefix = os.path.splitext(os.path.split(filepath)[1])[0] + "::"
-      additional_file_contents = cls.select_style_file(filepath).to_numpy()
+      additional_file_contents = cls.handle_style_file_selection_change(filepath).to_numpy()
       for prefixed_style in prefixed_styles:
         if prefixed_style[1].startswith(prefix):
           additional_file_contents = cls.add_or_replace(additional_file_contents, prefixed_style, prefix)
       cls.save_styles(pd.DataFrame(additional_file_contents, columns=cls.full_cols), filepath=filepath)
     cls.current_styles_file_path = None
-    return gr.Dropdown.update(choices=cls.additional_style_files(), value=""), cls.load_styles()
+    return gr.Dropdown.update(choices=cls.additional_style_files(display_names=True), value=""), cls.load_styles()
   
   @classmethod
   def get_and_update_lasthash(cls) -> str:
@@ -216,7 +237,7 @@ class StyleEditor:
     with gr.Blocks(analytics_enabled=False) as style_editor:
       dummy_component = gr.Label(visible=False)
       with gr.Row():
-        with gr.Column(scale=1, min_width=400):
+        with gr.Column(scale=1, min_width=500):
           with gr.Accordion(label="Documentation and Recent Changes", open=(cls.get_and_update_lasthash()!=cls.githash)):
             gr.HTML(value="<a href='https://github.com/chrisgoringe/Styles-Editor/blob/main/readme.md' target='_blank'>Link to Documentation</a>")
             gr.Markdown(value=cls.update_help)
@@ -237,7 +258,8 @@ class StyleEditor:
           with gr.Group(visible=False) as cls.additional_file_display:
             with gr.Row():
               with gr.Column(scale=1, min_width=400):
-                cls.style_file_selection = gr.Dropdown(choices=cls.additional_style_files(), value="", label="Additional Style File to Edit")
+                cls.style_file_selection = gr.Dropdown(choices=cls.additional_style_files(display_names=True), value=cls.display_name(''), 
+                                                       label="Additional Style File")
               with gr.Column(scale=1, min_width=400):
                 cls.create_additional_stylefile = gr.Button(value="Create new additional style file")
                 cls.merge_style_files_button = gr.Button(value="Merge into master")
@@ -252,7 +274,7 @@ class StyleEditor:
         cls.dataeditor = gr.Dataframe(value=cls.load_styles, col_count=(len(cls.cols)+1,'fixed'), 
                                           wrap=True, max_rows=1000, show_label=False, interactive=True, elem_id="style_editor_grid")
       
-      cls.search_and_replace_button.click(fn=cls.handle_search_and_replace_clicked, inputs=[cls.search_box, cls.replace_box, cls.dataeditor], outputs=cls.dataeditor)
+      cls.search_and_replace_button.click(fn=cls.handle_search_and_replace_click, inputs=[cls.search_box, cls.replace_box, cls.dataeditor], outputs=cls.dataeditor)
 
       cls.filter_box.change(fn=None, inputs=[cls.filter_box, cls.filter_select], _js="filter_style_list")
       cls.filter_select.change(fn=None, inputs=[cls.filter_box, cls.filter_select], _js="filter_style_list")
@@ -265,10 +287,11 @@ class StyleEditor:
       style_editor.load(fn=None, _js="when_loaded")
       style_editor.load(fn=cls.do_backup, inputs=[], outputs=[], every=600)
 
-      cls.use_additional_styles_checkbox.change(fn=cls.handle_use_additional_styles_box_changed, inputs=[cls.use_additional_styles_checkbox, cls.style_file_selection], outputs=[cls.additional_file_display, cls.dataeditor])
-      cls.create_additional_stylefile.click(fn=cls.create_style_file, inputs=dummy_component, outputs=cls.style_file_selection, _js="new_style_file_dialog")
-      cls.style_file_selection.change(fn=cls.select_style_file, inputs=cls.style_file_selection, outputs=cls.dataeditor)
-      cls.merge_style_files_button.click(fn=cls.merge_style_files, outputs=cls.use_additional_styles_checkbox)
+      cls.use_additional_styles_checkbox.change(fn=cls.handle_use_additional_styles_box_change, inputs=[cls.use_additional_styles_checkbox, cls.style_file_selection], 
+                                                outputs=[cls.additional_file_display, cls.dataeditor, cls.style_file_selection])
+      cls.create_additional_stylefile.click(fn=cls.handle_create_additional_style_file_click, inputs=dummy_component, outputs=cls.style_file_selection, _js="new_style_file_dialog")
+      cls.style_file_selection.change(fn=cls.handle_style_file_selection_change, inputs=cls.style_file_selection, outputs=cls.dataeditor)
+      cls.merge_style_files_button.click(fn=cls.handle_merge_style_files_click, outputs=cls.use_additional_styles_checkbox)
 
     return [(style_editor, "Style Editor", "style_editor")]
 
