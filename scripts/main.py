@@ -27,13 +27,13 @@ class Script(scripts.Script):
 class StyleEditor:
   update_help = """# Recent changes:
 ## Changed in this update:
+- Automatically create new Additional Style Files if needed
+
+## Changed in recent updates:
 - Regular backups created in `extensions/Styles-Editor/backups`
 - Updated documentation
 - Removed `Renumber Sort Column` button (just switch tabs and switch back!)
-- Removed `Extract from Master` button (automatically done when you go into additional style files view)
-
-## Changed in recent updates:
-- Right-click can be used to select a row in the table (a style)
+- Removed `Extract from Master` button (automatically done when you go into additional style files view)- Right-click can be used to select a row in the table (a style)
 - Delete the selected style by pressing `backspace`/`delete`
 """
   cols = ['name','prompt','negative_prompt']
@@ -141,7 +141,7 @@ class StyleEditor:
       return [cls.relative(f) for f in os.listdir(cls.additional_style_files_directory) if f.endswith(".csv")]
   
   @classmethod
-  def create_style_file(cls, filename):
+  def create_additional_style_file(cls, filename):
     if filename:
       filename = f"{os.path.splitext(filename)[0]}.csv"
       filepath = os.path.join(cls.additional_style_files_directory, filename)
@@ -179,6 +179,8 @@ class StyleEditor:
   @classmethod
   def extract_additional_styles(cls):
     prefixed_styles = [row for row in cls.select_style_file(cls.default_style_file_path).to_numpy() if "::" in row[1]]
+    for prefix in {row[1][:row[1].find('::')] for row in prefixed_styles}:
+      cls.create_additional_style_file(prefix)
     for filepath in cls.additional_style_files(False):
       prefix = os.path.splitext(os.path.split(filepath)[1])[0] + "::"
       additional_file_contents = cls.select_style_file(filepath).to_numpy()
@@ -266,7 +268,7 @@ class StyleEditor:
       style_editor.load(fn=cls.do_backup, inputs=[], outputs=[], every=600)
 
       cls.use_additional_styles_checkbox.change(fn=cls.handle_use_additional_styles_box_changed, inputs=[cls.use_additional_styles_checkbox, cls.style_file_selection], outputs=[cls.additional_file_display, cls.dataeditor])
-      cls.create_additional_stylefile.click(fn=cls.create_style_file, inputs=dummy_component, outputs=cls.style_file_selection, _js="new_style_file_dialog")
+      cls.create_additional_stylefile.click(fn=cls.create_additional_style_file, inputs=dummy_component, outputs=cls.style_file_selection, _js="new_style_file_dialog")
       cls.style_file_selection.change(fn=cls.select_style_file, inputs=cls.style_file_selection, outputs=cls.dataeditor)
       cls.merge_style_files_button.click(fn=cls.merge_style_files, outputs=cls.use_additional_styles_checkbox)
 
