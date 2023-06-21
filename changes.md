@@ -3,6 +3,8 @@
 ## 21 June 2023
 - Automatically create new Additional Style Files if needed
 - Automatically delete empty Additional Style Files on merge
+- Added notes column back in
+- Fixed some minor bugs
 
 ## 20 June 2023
 - Regular backups created in `extensions/Styles-Editor/backups` (saved every ten minutes if changes have been made, last 12 retained)
