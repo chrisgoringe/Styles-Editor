@@ -3,7 +3,6 @@
 ## Crawl (it's broken if this isn't done)
 
 ## Walk (definitely want to do)
-- When editing additional styles but none selected, select one [53](https://github.com/chrisgoringe/Styles-Editor/issues/53)
 - Better arrangement/styling of buttons 
 - Move style to additional style file with context menu or similar
 
