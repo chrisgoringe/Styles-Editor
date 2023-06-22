@@ -91,7 +91,7 @@ class StyleEditor:
     # skip the first line (which has headers) and use our own
     file = file or cls.current_styles_file_path
     try:
-      dataframe = pd.read_csv(file, header=None, names=cls.cols, 
+      dataframe = pd.read_csv(file, header=None, names=cls.cols, encoding="utf-8-sig",
                                   engine='python', skiprows=[0], usecols=[0,1,2])
     except:
       dataframe = pd.DataFrame(columns=cls.cols)
