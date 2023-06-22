@@ -339,14 +339,14 @@ class StyleEditor:
 
       cls.use_encryption_checkbox.change(fn=cls.handle_use_encryption_checkbox_changed, inputs=[cls.use_encryption_checkbox], outputs=[])
       cls.encryption_key.change(fn=cls.handle_encryption_key_change, inputs=[cls.encryption_key], outputs=[])
-      
+
       cls.dataeditor.change(fn=None, inputs=[cls.filter_box, cls.filter_select], _js="filter_style_list")
 
       cls.dataeditor.input(fn=cls.handle_dataeditor_input, inputs=[cls.dataeditor, cls.autosort_checkbox], outputs=cls.dataeditor)
       cls.autosort_checkbox.change(fn=cls.handle_autosort_checkbox_change, inputs=[cls.dataeditor, cls.autosort_checkbox], outputs=cls.dataeditor)
 
       style_editor.load(fn=None, _js="when_loaded")
-      style_editor.load(fn=cls.do_backup, inputs=[cls.use_encryption_checkbox, cls.encryption_key], outputs=[], every=600)
+      style_editor.load(fn=cls.do_backup, inputs=[], outputs=[], every=600)
 
       cls.use_additional_styles_checkbox.change(fn=cls.handle_use_additional_styles_box_change, inputs=[cls.use_additional_styles_checkbox, cls.style_file_selection], 
                                                 outputs=[cls.additional_file_display, cls.dataeditor, cls.style_file_selection])
