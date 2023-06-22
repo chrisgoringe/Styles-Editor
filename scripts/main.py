@@ -68,6 +68,8 @@ class StyleEditor:
       notes_dictionary = json.load(f)
   except:
     notes_dictionary = {}
+  encrypt = False
+  encrypt_key = ""
   
   @classmethod
   def save_notes_dictionary(cls):
@@ -258,7 +260,7 @@ class StyleEditor:
     return lasthash
   
   @classmethod
-  def do_backup(cls, encrypt:bool, key:str):
+  def do_backup(cls):
     if not cls.changed_since_backup:
       return
     fileroot = os.path.join(cls.backup_directory, datetime.datetime.now().strftime("%y%m%d_%H%M"))
@@ -268,10 +270,18 @@ class StyleEditor:
     for path in paths[24:]:
       os.remove(str(path))
     cls.changed_since_backup = False
-    if encrypt:
+    if cls.encrypt and len(cls.encrypt_key)>0:
       for extension in [".csv",".zip"]:
-        pyAesCrypt.encryptFile(fileroot+extension, fileroot+extension+".aes", key)
+        pyAesCrypt.encryptFile(fileroot+extension, fileroot+extension+".aes", cls.encrypt_key)
         os.remove(fileroot+extension)
+
+  @classmethod
+  def handle_use_encryption_checkbox_changed(cls, encrypt):
+    cls.encrypt = encrypt
+
+  @classmethod
+  def handle_encryption_key_change(cls, key):
+    cls.encrypt_key = key
 
   @classmethod
   def on_ui_tabs(cls):
@@ -327,6 +337,9 @@ class StyleEditor:
       cls.filter_box.change(fn=None, inputs=[cls.filter_box, cls.filter_select], _js="filter_style_list")
       cls.filter_select.change(fn=None, inputs=[cls.filter_box, cls.filter_select], _js="filter_style_list")
 
+      cls.use_encryption_checkbox.change(fn=cls.handle_use_encryption_checkbox_changed, inputs=[cls.use_encryption_checkbox], outputs=[])
+      cls.encryption_key.change(fn=cls.handle_encryption_key_change, inputs=[cls.encryption_key], outputs=[])
+      
       cls.dataeditor.change(fn=None, inputs=[cls.filter_box, cls.filter_select], _js="filter_style_list")
 
       cls.dataeditor.input(fn=cls.handle_dataeditor_input, inputs=[cls.dataeditor, cls.autosort_checkbox], outputs=cls.dataeditor)
