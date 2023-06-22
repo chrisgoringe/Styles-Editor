@@ -1,5 +1,8 @@
 # Recent changes
 
+## 22 June 2023
+- Option to encrypt backups
+
 ## 21 June 2023
 - Automatically create new Additional Style Files if needed
 - Automatically delete empty Additional Style Files on merge
