@@ -271,6 +271,7 @@ class StyleEditor:
     if encrypt:
       for extension in [".csv",".zip"]:
         pyAesCrypt.encryptFile(fileroot+extension, fileroot+extension+".aes", key)
+        os.remove(fileroot+extension)
 
   @classmethod
   def on_ui_tabs(cls):
