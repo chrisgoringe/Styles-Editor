@@ -10,6 +10,11 @@ import json
 import shutil
 import datetime
 from pathlib import Path
+try:
+  import pyAesCrypt
+  encrypt = True
+except:
+  encrypt = False
 
 class Script(scripts.Script):
   def __init__(self) -> None:
@@ -27,15 +32,19 @@ class Script(scripts.Script):
 class StyleEditor:
   update_help = """# Recent changes:
 ## Changed in this update:
-- Restored the `notes` column
+- Option to swap style sets (master and additional files)
+- Option to encrypt style set not being used
+- Option to encrypt backups
 
 ## Changed in recent updates:
+- Restored the `notes` column
 - Automatically create new Additional Style Files if needed
 - Automatically delete empty Additional Style Files on merge
 - Regular backups created in `extensions/Styles-Editor/backups`
 - Removed `Renumber Sort Column` button (just switch tabs and switch back!)
 - Removed `Extract from Master` button (automatically done when you go into additional style files view)- Right-click can be used to select a row in the table (a style)
 - Delete the selected style by pressing `backspace`/`delete`
+
 """
   cols = ['name','prompt','negative_prompt']
   full_cols = ['sort', 'name','prompt','negative_prompt','notes']
@@ -249,7 +258,7 @@ class StyleEditor:
     return lasthash
   
   @classmethod
-  def do_backup(cls):
+  def do_backup(cls, encrypt:bool, key:str):
     if not cls.changed_since_backup:
       return
     fileroot = os.path.join(cls.backup_directory, datetime.datetime.now().strftime("%y%m%d_%H%M"))
@@ -259,6 +268,9 @@ class StyleEditor:
     for path in paths[24:]:
       os.remove(str(path))
     cls.changed_since_backup = False
+    if encrypt:
+      for extension in [".csv",".zip"]:
+        pyAesCrypt.encryptFile(fileroot+extension, fileroot+extension+".aes", key)
 
   @classmethod
   def on_ui_tabs(cls):
@@ -269,6 +281,13 @@ class StyleEditor:
           with gr.Accordion(label="Documentation and Recent Changes", open=(cls.get_and_update_lasthash()!=cls.githash)):
             gr.HTML(value="<a href='https://github.com/chrisgoringe/Styles-Editor/blob/main/readme.md' target='_blank'>Link to Documentation</a>")
             gr.Markdown(value=cls.update_help)
+            gr.HTML(value="<a href='https://github.com/chrisgoringe/Styles-Editor/blob/main/changes.md' target='_blank'>Change log</a>")
+        with gr.Column(scale=1, min_width=500):
+          with gr.Accordion(label="Encryption", open=False):
+            cls.use_encryption_checkbox = gr.Checkbox(value=False, label="Use Encryption")
+            cls.encryption_key = gr.Textbox(max_lines=1, placeholder="encryption key", label="Encryption Key")
+            gr.Markdown(value="Backups and inactive style sets are encrypted. The active style file and additional style files are not.")
+            gr.Markdown(value="Files are encrypted using pyAesCrypt (https://pypi.org/project/pyAesCrypt/)")
         with gr.Column(scale=10):
           pass
       with gr.Row():
@@ -313,7 +332,7 @@ class StyleEditor:
       cls.autosort_checkbox.change(fn=cls.handle_autosort_checkbox_change, inputs=[cls.dataeditor, cls.autosort_checkbox], outputs=cls.dataeditor)
 
       style_editor.load(fn=None, _js="when_loaded")
-      style_editor.load(fn=cls.do_backup, inputs=[], outputs=[], every=600)
+      style_editor.load(fn=cls.do_backup, inputs=[cls.use_encryption_checkbox, cls.encryption_key], outputs=[], every=600)
 
       cls.use_additional_styles_checkbox.change(fn=cls.handle_use_additional_styles_box_change, inputs=[cls.use_additional_styles_checkbox, cls.style_file_selection], 
                                                 outputs=[cls.additional_file_display, cls.dataeditor, cls.style_file_selection])
