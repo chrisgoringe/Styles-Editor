@@ -10,6 +10,7 @@ import pyAesCrypt
 
 class FileManager:
   columns = ['name','prompt','negative_prompt']
+  user_columns = ['prompt','negative_prompt','notes']
 
   basedir = scripts.basedir()
   additional_style_files_directory = os.path.join(basedir,"additonal_style_files")
@@ -47,12 +48,19 @@ class FileManager:
     dataframe.insert(loc=0, column="sort", value=[i+1 for i in entries])
     dataframe.insert(loc=4, column="notes", value=[cls.lookup_notes(dataframe['name'][i], display) for i in entries])
     dataframe.fillna('', inplace=True)
+    if len(dataframe)>0:
+      for column in cls.user_columns:
+        dataframe[column] = dataframe[column].str.replace(r'\n', r'[/]',regex=True)
     return dataframe
   
   @classmethod
   def save_styles(cls, data:pd.DataFrame, filename=None, use_default=False):
     filename = filename or (cls.default_style_file_path if use_default else cls.current_styles_file_path)
-    data.to_csv(filename, encoding="utf-8-sig", columns=cls.columns, index=False)
+    clone = data.copy()
+    if len(clone)>0:
+      for column in cls.user_columns:
+        clone[column] = clone[column].str.replace(r'[/]', r'\n',regex=True)
+    clone.to_csv(filename, encoding="utf-8-sig", columns=cls.columns, index=False)
     cls.update_notes_dictionary(data, cls.display_name(filename))
     cls.save_notes_dictionary()
     prompt_styles.reload()
