@@ -8,7 +8,7 @@ import os
 from git import Repo
 import json
 
-from file_manager import FileManager
+from scripts.filemanager import FileManager
 
 class Script(scripts.Script):
   def __init__(self) -> None:
