@@ -79,7 +79,6 @@ class FileManager:
     paths = sorted(Path(cls.backup_directory).iterdir(), key=os.path.getmtime, reverse=True)
     for path in paths[24:]:
       os.remove(str(path))
-    cls.changed_since_backup = False
     if cls.encrypt and len(cls.encrypt_key)>0:
       for extension in [".csv",".zip"]:
         pyAesCrypt.encryptFile(fileroot+extension, fileroot+extension+".aes", cls.encrypt_key)

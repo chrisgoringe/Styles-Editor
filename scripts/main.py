@@ -7,6 +7,7 @@ import numpy as np
 import os
 from git import Repo
 import json
+import time, threading
 
 from scripts.filemanager import FileManager
 
@@ -22,7 +23,7 @@ class Script(scripts.Script):
 
   def ui(self, is_img2img):
     return ()
-  
+
 class StyleEditor:
   update_help = """# Recent changes:
 ## Changed in this update:
@@ -42,7 +43,9 @@ class StyleEditor:
 """
   display_columns = ['sort', 'name','prompt','negative_prompt','notes']
   githash = Repo(FileManager.basedir).git.rev_parse("HEAD")
-  changed_since_backup = True
+  changed_since_backup = False
+  backup_thread = None
+  backup_delay = 600
 
   @staticmethod
   def to_numeric(series:pd.Series):
@@ -166,10 +169,18 @@ class StyleEditor:
     return lasthash
   
   @classmethod
+  def start_backups(cls):
+    if cls.backup_thread is None:
+      cls.backup_thread = threading.Thread(group=None, target=cls.handle_backup, daemon=True)
+      cls.backup_thread.start()
+
+  @classmethod
   def handle_backup(cls):
-    if not cls.changed_since_backup:
-      return
-    FileManager.do_backup()
+    while True:
+      if cls.changed_since_backup:
+        FileManager.do_backup()
+        cls.changed_since_backup = False
+      time.sleep(cls.backup_delay)
 
   @classmethod
   def handle_use_encryption_checkbox_changed(cls, encrypt):
@@ -184,7 +195,7 @@ class StyleEditor:
     with gr.Blocks(analytics_enabled=False) as style_editor:
       dummy_component = gr.Label(visible=False)
       with gr.Row():
-        with gr.Column(scale=1, min_width=500):
+        with gr.Column(scale=1, min_width=600):
           with gr.Accordion(label="Documentation and Recent Changes", open=(cls.get_and_update_lasthash()!=cls.githash)):
             gr.HTML(value="<a href='https://github.com/chrisgoringe/Styles-Editor/blob/main/readme.md' target='_blank'>Link to Documentation</a>")
             gr.Markdown(value=cls.update_help)
@@ -242,7 +253,7 @@ class StyleEditor:
       cls.autosort_checkbox.change(fn=cls.handle_autosort_checkbox_change, inputs=[cls.dataeditor, cls.autosort_checkbox], outputs=cls.dataeditor)
 
       style_editor.load(fn=None, _js="when_loaded")
-      style_editor.load(fn=cls.handle_backup, inputs=[], outputs=[], every=600)
+      style_editor.load(fn=cls.start_backups, inputs=[], outputs=[])
 
       cls.use_additional_styles_checkbox.change(fn=cls.handle_use_additional_styles_box_change, inputs=[cls.use_additional_styles_checkbox, cls.style_file_selection], 
                                                 outputs=[cls.additional_file_display, cls.dataeditor, cls.style_file_selection])
