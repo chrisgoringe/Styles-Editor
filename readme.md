@@ -43,10 +43,14 @@ If filtering by regex, if an invalid regex is entered it will be highlighted in 
 The `sort` column is automatically generated whenever you save or load. If you select `autosort` and the table will sort whenever you edit the `sort` value (as long as every value is numeric). 
 
 ### Backups
-The master style file, and a zip of the additional style files directory, is backed up every ten minutes (with the most recent twelve backups retained) in `extensions/Styles-Editor/backups`
+The master style file is backed up every ten minutes (with the most recent twelve backups retained) in `extensions/Styles-Editor/backups`
 
 ### Notes 
 You can put whatever you want in the notes column
+
+### Encryption
+Check the 'Use encryption' box and all (subsequent) backups will be encrypted using the key you specify.
+Encryption is done using [pyAesCrypt](https://pypi.org/project/pyAesCrypt/) and encrypted backups can be recovered using the tools on that page.
 
 ### Stargazers
 Thanks to those who've starred this - 20 as of 21 June 2023.

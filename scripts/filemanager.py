@@ -75,14 +75,12 @@ class FileManager:
   def do_backup(cls):
     fileroot = os.path.join(cls.backup_directory, datetime.datetime.now().strftime("%y%m%d_%H%M"))
     shutil.copyfile(FileManager.default_style_file_path, fileroot+".csv")
-    shutil.make_archive(fileroot,format="zip",root_dir=cls.additional_style_files_directory,base_dir='.')
     paths = sorted(Path(cls.backup_directory).iterdir(), key=os.path.getmtime, reverse=True)
     for path in paths[24:]:
       os.remove(str(path))
     if cls.encrypt and len(cls.encrypt_key)>0:
-      for extension in [".csv",".zip"]:
-        pyAesCrypt.encryptFile(fileroot+extension, fileroot+extension+".aes", cls.encrypt_key)
-        os.remove(fileroot+extension)
+      pyAesCrypt.encryptFile(fileroot+".csv", fileroot+".csv.aes", cls.encrypt_key)
+      os.remove(fileroot+".csv")
 
   @classmethod
   def full_path(cls, filename:str) -> str:

@@ -28,8 +28,7 @@ class StyleEditor:
   update_help = """# Recent changes:
 ## Changed in this update:
 - Option to swap style sets (master and additional files)
-- Option to encrypt style set not being used
-- Option to encrypt backups
+- Option to encrypt backups and alternate style set
 
 ## Changed in recent updates:
 - Restored the `notes` column
@@ -201,7 +200,7 @@ class StyleEditor:
             gr.Markdown(value=cls.update_help)
             gr.HTML(value="<a href='https://github.com/chrisgoringe/Styles-Editor/blob/main/changes.md' target='_blank'>Change log</a>")
         with gr.Column(scale=1, min_width=500):
-          with gr.Accordion(label="Encryption", open=False):
+          with gr.Accordion(label="Encryption and Styleset swap", open=False):
             cls.use_encryption_checkbox = gr.Checkbox(value=False, label="Use Encryption")
             cls.encryption_key_textbox = gr.Textbox(max_lines=1, placeholder="encryption key", label="Encryption Key")
             gr.Markdown(value="Backups and inactive style sets are encrypted. The active style file and additional style files are not.")
