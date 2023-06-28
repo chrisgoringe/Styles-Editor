@@ -195,7 +195,7 @@ class StyleEditor:
       cls.extract_additional_styles()
       return gr.Text.update(visible=False), False, FileManager.load_styles(use_default=True)
     else:
-      return gr.Text.update(visible=True, value="Couldn't restore for some reason")
+      return gr.Text.update(visible=True, value="Couldn't restore for some reason"), False, FileManager.load_styles(use_default=True)
 
   @classmethod
   def on_ui_tabs(cls):
