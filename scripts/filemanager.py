@@ -74,15 +74,30 @@ class FileManager:
   @classmethod
   def do_backup(cls):
     fileroot = os.path.join(cls.backup_directory, datetime.datetime.now().strftime("%y%m%d_%H%M"))
-    shutil.copyfile(FileManager.default_style_file_path, fileroot+".csv")
-    shutil.make_archive(fileroot,format="zip",root_dir=cls.additional_style_files_directory,base_dir='.')
+    shutil.copyfile(cls.default_style_file_path, fileroot+".csv")
     paths = sorted(Path(cls.backup_directory).iterdir(), key=os.path.getmtime, reverse=True)
     for path in paths[24:]:
       os.remove(str(path))
     if cls.encrypt and len(cls.encrypt_key)>0:
-      for extension in [".csv",".zip"]:
-        pyAesCrypt.encryptFile(fileroot+extension, fileroot+extension+".aes", cls.encrypt_key)
-        os.remove(fileroot+extension)
+      pyAesCrypt.encryptFile(fileroot+".csv", fileroot+".csv.aes", cls.encrypt_key)
+      os.remove(fileroot+".csv")
+
+  @classmethod
+  def restore_from_backup(cls, tempfile):
+    if os.path.exists(cls.default_style_file_path):
+      os.rename(cls.default_style_file_path, cls.default_style_file_path+".temp")
+    if cls.encrypt and len(cls.encrypt_key)>0:
+      try:
+        pyAesCrypt.decryptFile(tempfile, cls.default_style_file_path, cls.encrypt_key)
+      except:
+        if os.path.exists(cls.default_style_file_path+".temp"):
+          os.rename(cls.default_style_file_path+".temp", cls.default_style_file_path)
+        return False
+    else:
+      os.rename(tempfile, cls.default_style_file_path)
+    if os.path.exists(cls.default_style_file_path+".temp"):
+      os.remove(cls.default_style_file_path+".temp")
+    return True
 
   @classmethod
   def full_path(cls, filename:str) -> str:
