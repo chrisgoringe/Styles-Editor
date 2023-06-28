@@ -2,7 +2,7 @@
 
 ## 28 June 2023
 - Allow linebreaks in styles (represented as `<br>` in editor)
-- Swap between two stylesets
+- Restore from backups
 
 ## 22 June 2023
 - Option to encrypt backups

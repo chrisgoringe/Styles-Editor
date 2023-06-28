@@ -27,10 +27,10 @@ class Script(scripts.Script):
 class StyleEditor:
   update_help = """# Recent changes:
 ## Changed in this update:
-- Option to swap style sets (master and additional files)
-- Option to encrypt backups and alternate style set
+- Restore from backups
 
 ## Changed in recent updates:
+- Option to encrypt backups
 - Restored the `notes` column
 - Automatically create new Additional Style Files if needed
 - Automatically delete empty Additional Style Files on merge
@@ -190,6 +190,14 @@ class StyleEditor:
     FileManager.encrypt_key = key
 
   @classmethod
+  def handle_restore_backup_file_upload(cls, tempfile):
+    if FileManager.restore_from_backup(tempfile.name):
+      cls.extract_additional_styles()
+      return gr.Text.update(visible=False), False, FileManager.load_styles(use_default=True)
+    else:
+      return gr.Text.update(visible=True, value="Couldn't restore for some reason")
+
+  @classmethod
   def on_ui_tabs(cls):
     with gr.Blocks(analytics_enabled=False) as style_editor:
       dummy_component = gr.Label(visible=False)
@@ -200,11 +208,14 @@ class StyleEditor:
             gr.Markdown(value=cls.update_help)
             gr.HTML(value="<a href='https://github.com/chrisgoringe/Styles-Editor/blob/main/changes.md' target='_blank'>Change log</a>")
         with gr.Column(scale=1, min_width=500):
-          with gr.Accordion(label="Encryption and Styleset swap", open=False):
+          with gr.Accordion(label="Encryption", open=False):
             cls.use_encryption_checkbox = gr.Checkbox(value=False, label="Use Encryption")
             cls.encryption_key_textbox = gr.Textbox(max_lines=1, placeholder="encryption key", label="Encryption Key")
-            gr.Markdown(value="Backups and inactive style sets are encrypted. The active style file and additional style files are not.")
+            gr.Markdown(value="If checked, Backups are encrypted. The active style file and additional style files are not.")
             gr.Markdown(value="Files are encrypted using pyAesCrypt (https://pypi.org/project/pyAesCrypt/)")
+          with gr.Accordion(label="Restore from Backup", open=False):
+            cls.restore_backup_file_upload = gr.File(file_types=[".csv", ".aes"], label="Restore from backup")
+            cls.restore_result = gr.Text(visible=False, show_label=False)
         with gr.Column(scale=10):
           pass
       with gr.Row():
@@ -245,6 +256,7 @@ class StyleEditor:
 
       cls.use_encryption_checkbox.change(fn=cls.handle_use_encryption_checkbox_changed, inputs=[cls.use_encryption_checkbox], outputs=[])
       cls.encryption_key_textbox.change(fn=cls.handle_encryption_key_change, inputs=[cls.encryption_key_textbox], outputs=[])
+      cls.restore_backup_file_upload.upload(fn=cls.handle_restore_backup_file_upload, inputs=[cls.restore_backup_file_upload], outputs=[cls.restore_result, cls.use_additional_styles_checkbox, cls.dataeditor])
 
       cls.dataeditor.change(fn=None, inputs=[cls.filter_textbox, cls.filter_select], _js="filter_style_list")
 
