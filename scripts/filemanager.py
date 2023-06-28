@@ -74,6 +74,8 @@ class FileManager:
   @classmethod
   def do_backup(cls):
     fileroot = os.path.join(cls.backup_directory, datetime.datetime.now().strftime("%y%m%d_%H%M"))
+    if not os.path.exists(cls.default_style_file_path):
+      return
     shutil.copyfile(cls.default_style_file_path, fileroot+".csv")
     paths = sorted(Path(cls.backup_directory).iterdir(), key=os.path.getmtime, reverse=True)
     for path in paths[24:]:
