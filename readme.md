@@ -15,6 +15,11 @@ Alternatively, paste the url `https://github.com/chrisgoringe/Styles-Editor` int
 
 Or clone the repository into your extensions folder.
 
+## Gradio
+This extension requires `gradio 3.30` or above. Automatic1111 moved to this on May 19th 2023, so if you have updated since then you'll be fine.
+
+If you get an error `AttributeError: 'Dataframe' object has no attribute 'input'`, then you are probably still running `gradio 3.29`. Check before raising an issue!
+
 ## Basic Usage
 
 ### Edit styles
