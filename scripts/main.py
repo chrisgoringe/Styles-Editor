@@ -27,17 +27,15 @@ class Script(scripts.Script):
 class StyleEditor:
   update_help = """# Recent changes:
 ## Changed in this update:
-- Restore from backups
+- Layout tweaks
+- Improved handling of backup restore errors
 
 ## Changed in recent updates:
+- Restore from backups
 - Option to encrypt backups
 - Restored the `notes` column
 - Automatically create new Additional Style Files if needed
 - Automatically delete empty Additional Style Files on merge
-- Regular backups created in `extensions/Styles-Editor/backups`
-- Removed `Renumber Sort Column` button (just switch tabs and switch back!)
-- Removed `Extract from Master` button (automatically done when you go into additional style files view)- Right-click can be used to select a row in the table (a style)
-- Delete the selected style by pressing `backspace`/`delete`
 
 """
   display_columns = ['sort', 'name','prompt','negative_prompt','notes']
@@ -191,55 +189,64 @@ class StyleEditor:
 
   @classmethod
   def handle_restore_backup_file_upload(cls, tempfile):
-    if FileManager.restore_from_backup(tempfile.name):
+    error = FileManager.restore_from_backup(tempfile.name)
+    if error is None:
       cls.extract_additional_styles()
-      return gr.Text.update(visible=False), False, FileManager.load_styles(use_default=True)
+      return gr.Text.update(visible=True, value="Styles restored"), False, FileManager.load_styles(use_default=True)
     else:
-      return gr.Text.update(visible=True, value="Couldn't restore for some reason"), False, FileManager.load_styles(use_default=True)
+      return gr.Text.update(visible=True, value=error), False, FileManager.load_styles(use_default=True)
+    
+  @classmethod
+  def handle_restore_backup_file_clear(cls):
+    return gr.Text.update(visible=False)
 
   @classmethod
   def on_ui_tabs(cls):
     with gr.Blocks(analytics_enabled=False) as style_editor:
       dummy_component = gr.Label(visible=False)
       with gr.Row():
-        with gr.Column(scale=1, min_width=600):
+        with gr.Column(scale=1, min_width=400):
           with gr.Accordion(label="Documentation and Recent Changes", open=(cls.get_and_update_lasthash()!=cls.githash)):
             gr.HTML(value="<a href='https://github.com/chrisgoringe/Styles-Editor/blob/main/readme.md' target='_blank'>Link to Documentation</a>")
             gr.Markdown(value=cls.update_help)
             gr.HTML(value="<a href='https://github.com/chrisgoringe/Styles-Editor/blob/main/changes.md' target='_blank'>Change log</a>")
-        with gr.Column(scale=1, min_width=500):
+        with gr.Column(scale=1, min_width=300):
           with gr.Accordion(label="Encryption", open=False):
             cls.use_encryption_checkbox = gr.Checkbox(value=False, label="Use Encryption")
             cls.encryption_key_textbox = gr.Textbox(max_lines=1, placeholder="encryption key", label="Encryption Key")
-            gr.Markdown(value="If checked, Backups are encrypted. The active style file and additional style files are not.")
+            gr.Markdown(value="If checked, and a key is provided, backups are encrypted. The active style file and additional style files are not.")
             gr.Markdown(value="Files are encrypted using pyAesCrypt (https://pypi.org/project/pyAesCrypt/)")
+        with gr.Column(scale=1, min_width=300):
           with gr.Accordion(label="Restore from Backup", open=False):
+            gr.Markdown(value="If restoring from an encrypted backup, enter the encrption key under `Encryption` first.")
             cls.restore_backup_file_upload = gr.File(file_types=[".csv", ".aes"], label="Restore from backup")
-            cls.restore_result = gr.Text(visible=False, show_label=False)
-        with gr.Column(scale=10):
+            cls.restore_result = gr.Text(visible=False, label="Result:")
+        with gr.Column(scale=1, min_width=300):
+          with gr.Accordion(label="Filter view", open=False):
+            cls.filter_textbox = gr.Textbox(max_lines=1, interactive=True, placeholder="filter", elem_id="style_editor_filter", show_label=False)
+            cls.filter_select = gr.Dropdown(choices=["Exact match", "Case insensitive", "regex"], value="Exact match", show_label=False)
+        with gr.Column(scale=1, min_width=300):
+          with gr.Accordion(label="Search and replace", open=False):
+            cls.search_box = gr.Textbox(max_lines=1, interactive=True, placeholder="search for", show_label=False)
+            cls.replace_box= gr.Textbox(max_lines=1, interactive=True, placeholder="replace with", show_label=False)
+            cls.search_and_replace_button = gr.Button(value="Search and Replace")
+        with gr.Column(scale=1, min_width=300):
           pass
-      with gr.Row():
-        with gr.Column(scale=3, min_width=100):
-          cls.filter_textbox = gr.Textbox(max_lines=1, interactive=True, placeholder="filter", elem_id="style_editor_filter", show_label=False)
-          cls.filter_select = gr.Dropdown(choices=["Exact match", "Case insensitive", "regex"], value="Exact match", show_label=False)
-        with gr.Column(scale=2, min_width=100):
-          cls.search_box = gr.Textbox(max_lines=1, interactive=True, placeholder="search for", show_label=False)
-          cls.replace_box= gr.Textbox(max_lines=1, interactive=True, placeholder="replace with", show_label=False)
-          cls.search_and_replace_button = gr.Button(value="Search and Replace")
       with gr.Row():
         with gr.Column():
           with gr.Row():
             cls.use_additional_styles_checkbox = gr.Checkbox(value=False, label="Edit additional style files")
           with gr.Group(visible=False) as cls.additional_file_display:
             with gr.Row():
-              with gr.Column(scale=1, min_width=400):
+              #with gr.Column(scale=1, min_width=200):
                 cls.style_file_selection = gr.Dropdown(choices=cls.additional_style_files(display_names=True), value=FileManager.display_name(''), 
                                                        label="Additional Style File")
-              with gr.Column(scale=1, min_width=400):
+              #with gr.Column(scale=1, min_width=200):
                 cls.create_additional_stylefile = gr.Button(value="Create new additional style file")
+              #with gr.Column(scale=1, min_width=200):
                 cls.merge_style_files_button = gr.Button(value="Merge into master")
-              with gr.Column(scale=10):
-                pass
+              #with gr.Column(scale=10):
+              #  pass
       with gr.Row():
         with gr.Column(scale=1, min_width=150):
           cls.autosort_checkbox = gr.Checkbox(value=False, label="Autosort")
@@ -257,6 +264,7 @@ class StyleEditor:
       cls.use_encryption_checkbox.change(fn=cls.handle_use_encryption_checkbox_changed, inputs=[cls.use_encryption_checkbox], outputs=[])
       cls.encryption_key_textbox.change(fn=cls.handle_encryption_key_change, inputs=[cls.encryption_key_textbox], outputs=[])
       cls.restore_backup_file_upload.upload(fn=cls.handle_restore_backup_file_upload, inputs=[cls.restore_backup_file_upload], outputs=[cls.restore_result, cls.use_additional_styles_checkbox, cls.dataeditor])
+      cls.restore_backup_file_upload.clear(fn=cls.handle_restore_backup_file_clear, inputs=[], outputs=[cls.restore_result])
 
       cls.dataeditor.change(fn=None, inputs=[cls.filter_textbox, cls.filter_select], _js="filter_style_list")
 
