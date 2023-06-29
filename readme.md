@@ -27,7 +27,7 @@ Enter a search term and a replace term and press the button...
 Click on a cell to select it, then use Ctrl-X, C and V.
 
 ### Delete styles
-Right click on a style to select that row. Then hit `backspace` or `delete`. If you are using [additional style files](./additional_style_files.md) you need to delete the style in the additional style file, not the master style file.
+Right-click on a style to select that row. Then hit `backspace` or `delete`. If you are using [additional style files](./additional_style_files.md) you need to delete the style in the additional style file, not the master style file.
 
 ### Add styles
 Use the `New row` button, and then edit the boxes as you need. Note that if you have a filter applied the new row probably won't appear because it is empty, so best not to do that.
@@ -40,18 +40,19 @@ Type into the filter text box to only show rows matching the text string. Matche
 If filtering by regex, if an invalid regex is entered it will be highlighted in red.
 
 ### Sorting
-The `sort` column is automatically generated whenever you save or load. If you select `autosort` and the table will sort whenever you edit the `sort` value (as long as every value is numeric). 
+The `sort` column is automatically generated whenever you save or load. If you select `autosort` the table will automatically sort whenever you change any `sort` value (as long as every `sort` value is numeric). 
 
 ### Notes 
-You can put whatever you want in the notes column
+You can put whatever you want in the notes column. 
 
 ### Encryption
 Check the `Use encryption` box and all (subsequent) backups will be encrypted using the key you specify.
-Encryption is done using [pyAesCrypt](https://pypi.org/project/pyAesCrypt/) and encrypted backups can be recovered using the tools on that page, or as below.
+Encryption is done using [pyAesCrypt](https://pypi.org/project/pyAesCrypt/).
 
 ### Backups
 The master style file is backed up every ten minutes (with the most recent twelve backups retained) in `extensions/Styles-Editor/backups`.
-To restore a backup, drag-and-drop the backup style file into the `restore from backup` box. The encryption settings are used; so if the file is not encrypted, make sure the `Use encryption` box is not checked; if the backup is encrypted, check that box and enter the password before doing a restore.
+
+To restore a backup, drag and drop the backup style file into the `restore from backup` box. If it is encrypted (`.aes`) then the encryption key in the `Encryption` section is used to decrypt.
 
 ### Stargazers
 Thanks to those who've starred this - 20 as of 21 June 2023.
