@@ -60,4 +60,4 @@ The master style file is backed up every ten minutes (if changes have been made)
 To restore a backup, drag and drop the backup style file into the `restore from backup` box. If it is encrypted (`.aes`) then the encryption key in the `Encryption` section is used to decrypt.
 
 ### Stargazers
-Thanks to those who've starred this - 20 as of 21 June 2023.
+Thanks to those who've starred this - 20 as of 21 June 2023. Knowing people value the extension makes it worth working on.
