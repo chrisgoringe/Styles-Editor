@@ -54,9 +54,21 @@ class FileManager:
     return dataframe
   
   @classmethod
+  def fix_duplicates(cls, data:pd.DataFrame):
+    names = data['name']
+    used = set()
+    for index, value in names.items():
+      if value in used:
+        while value in used:
+          value = value + "x"
+        names.at[index] = value
+      used.add(value)
+  
+  @classmethod
   def save_styles(cls, data:pd.DataFrame, filename=None, use_default=False):
     filename = filename or (cls.default_style_file_path if use_default else cls.current_styles_file_path)
     clone = data.copy()
+    cls.fix_duplicates(clone)
     if len(clone)>0:
       for column in cls.user_columns:
         clone[column] = clone[column].str.replace('<br>', '\n',regex=False)
