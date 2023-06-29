@@ -55,7 +55,7 @@ Check the `Use encryption` box and all (subsequent) backups will be encrypted us
 Encryption is done using [pyAesCrypt](https://pypi.org/project/pyAesCrypt/).
 
 ### Backups
-The master style file is backed up every ten minutes (with the most recent twelve backups retained) in `extensions/Styles-Editor/backups`.
+The master style file is backed up every ten minutes (if changes have been made), with the most recent 24 backups retained. Backups are stored in `extensions/Styles-Editor/backups`.
 
 To restore a backup, drag and drop the backup style file into the `restore from backup` box. If it is encrypted (`.aes`) then the encryption key in the `Encryption` section is used to decrypt.
 
