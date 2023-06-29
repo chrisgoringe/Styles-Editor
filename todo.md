@@ -1,4 +1,5 @@
 # Things I hope to add
+Feel free to open an issue if there's something else you'd like!
 
 ## Crawl (it's broken if this isn't done)
 Nobody here but us chickens
