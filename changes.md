@@ -1,5 +1,8 @@
 # Recent changes
 
+## 29 June 2023
+- Layout tweaks and minor fixes
+
 ## 28 June 2023
 - Allow linebreaks in styles (represented as `<br>` in editor)
 - Restore from backups

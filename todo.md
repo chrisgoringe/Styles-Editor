@@ -3,7 +3,6 @@
 ## Crawl (it's broken if this isn't done)
 
 ## Walk (definitely want to do)
-- Better arrangement/styling of buttons 
 - Move style to additional style file with context menu or similar
 
 ## Run (these might be nice)

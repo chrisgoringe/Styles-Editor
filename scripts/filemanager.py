@@ -98,20 +98,26 @@ class FileManager:
 
   @classmethod
   def restore_from_backup(cls, tempfile):
+    error = None
     if os.path.exists(cls.default_style_file_path):
+      if os.path.exists(cls.default_style_file_path+".temp"):
+        os.remove(cls.default_style_file_path+".temp")
       os.rename(cls.default_style_file_path, cls.default_style_file_path+".temp")
-    if cls.encrypt and len(cls.encrypt_key)>0:
+    if os.path.splitext(tempfile)[1]==".aes":
       try:
         pyAesCrypt.decryptFile(tempfile, cls.default_style_file_path, cls.encrypt_key)
       except:
-        if os.path.exists(cls.default_style_file_path+".temp"):
-          os.rename(cls.default_style_file_path+".temp", cls.default_style_file_path)
-        return False
-    else:
+        error = "Failed to decrypt .aes file"
+    elif os.path.splitext(tempfile)[1]==".csv":
       os.rename(tempfile, cls.default_style_file_path)
-    if os.path.exists(cls.default_style_file_path+".temp"):
-      os.remove(cls.default_style_file_path+".temp")
-    return True
+    else:
+      error = "Can only restore from .csv or .aes file"
+    if os.path.exists(cls.default_style_file_path+".temp"):    
+      if os.path.exists(cls.default_style_file_path):
+        os.remove(cls.default_style_file_path+".temp")
+      else:
+        os.rename(cls.default_style_file_path+".temp", cls.default_style_file_path)
+    return error
 
   @classmethod
   def full_path(cls, filename:str) -> str:
