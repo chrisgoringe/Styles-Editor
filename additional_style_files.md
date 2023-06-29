@@ -6,14 +6,15 @@ Any style that is in an additional style file gets renamed to `filename::stylena
 
 ## Creating and removing additional style files
 Tick the `Edit additional style files` box, then use `Create new additional style file` to create the categories you want. 
-Or manually add the prefix `title::` to a style in the master view, and the additional style file `title` will be created for you when you next tick the `Edit additional style files` box.
+
+Alternatively, add the prefix `title::` to a style in the master view: the additional style file `title` will be created for you when you next tick the `Edit additional style files` box.
 
 Empty additional style files are removed when you merge.
 
 ## Saving
-`Merge into master` saves the contents of the additional style files into the master style file.
+`Merge into master` saves the contents of the additional style files into the master style file. If you don't merge, the changes will be retained in the additional style file, but not available for use.
 
 ## Moving styles to an additional style file
-In the master view (`Edit additional style files` box unticked) styles are shown in the `filename::stylename` format. You can manually edit the style name to move it to an additional style file, which will be created if it doesn't exist.
+In the master view (`Edit additional style files` box unticked) styles are shown in the `filename::stylename` format. You can manually edit the style name to move it to an additional style file.
 
 
