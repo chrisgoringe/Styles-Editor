@@ -3,13 +3,12 @@ import modules.scripts as scripts
 from modules import script_callbacks
 
 import pandas as pd
-import numpy as np
 import os
-from git import Repo
-import json
-import time, threading
 
 from scripts.filemanager import FileManager
+from scripts.additionals import Additionals
+from scripts.background import Background
+from scripts.shared import display_columns
 
 class Script(scripts.Script):
   def __init__(self) -> None:
@@ -27,54 +26,53 @@ class Script(scripts.Script):
 class StyleEditor:
   update_help = """# Recent changes:
 ## Changed in this update:
-- Layout tweaks
-- Improved handling of backup restore errors
+- Delete from master list removes from additional style file as well
+- Significant refactoring. 
 
 ## Changed in recent updates:
-- Restore from backups
+- Layout tweaks
+- Improved handling of backup restore errors - Restore from backups
 - Option to encrypt backups
 - Restored the `notes` column
 - Automatically create new Additional Style Files if needed
 - Automatically delete empty Additional Style Files on merge
 
 """
-  display_columns = ['sort', 'name','prompt','negative_prompt','notes']
-  githash = Repo(FileManager.basedir).git.rev_parse("HEAD")
-  changed_since_backup = False
-  backup_thread = None
-  backup_delay = 600
+  backup = Background(FileManager.do_backup, 600)
 
   @staticmethod
-  def to_numeric(series:pd.Series):
+  def _to_numeric(series:pd.Series):
     nums = pd.to_numeric(series)
     if any(nums.isna()):
       raise Exception("don't update display")
     return nums
   
   @classmethod
-  def sort_dataset(cls, data:pd.DataFrame) -> pd.DataFrame:
+  def _sort_dataset(cls, data:pd.DataFrame) -> pd.DataFrame:
       try:
-        return data.sort_values(by='sort', axis='index', inplace=False, na_position='first', key=cls.to_numeric)
+        return data.sort_values(by='sort', axis='index', inplace=False, na_position='first', key=cls._to_numeric)
       except:
         return data
-      
+  
   @classmethod
-  def drop_deleted(cls, data:pd.DataFrame) -> pd.DataFrame:
+  def _drop_deleted(cls, data:pd.DataFrame) -> pd.DataFrame:
     rows_to_drop = [i for (i, row) in data.iterrows() if row[0]=='!!!']
+    for style in [row[1] for (_, row) in data.iterrows() if row[0]=='!!!']:
+      FileManager.remove_from_additional(style)
     return data.drop(index=rows_to_drop)
       
   @classmethod
   def handle_autosort_checkbox_change(cls, data:pd.DataFrame, autosort) -> pd.DataFrame:
     if autosort:
-      data = cls.sort_dataset(data)
+      data = cls._sort_dataset(data)
       FileManager.save_styles(data)
     return data
 
   @classmethod
   def handle_dataeditor_input(cls, data:pd.DataFrame, autosort) -> pd.DataFrame:
-    cls.changed_since_backup = True
-    data = cls.drop_deleted(data)
-    data = cls.sort_dataset(data) if autosort else data
+    cls.backup.set_pending()
+    data = cls._drop_deleted(data)
+    data = cls._sort_dataset(data) if autosort else data
     FileManager.save_styles(data)
     return data
   
@@ -87,98 +85,45 @@ class StyleEditor:
       for j, item in enumerate(row):
         if isinstance(item,str) and search in item:
           data_np[i][j] = item.replace(search, replace)
-    return pd.DataFrame(data=data_np, columns=cls.display_columns)
+    return pd.DataFrame(data=data_np, columns=display_columns)
   
   @classmethod
   def handle_use_additional_styles_box_change(cls, activate, filename):
-    FileManager.current_styles_file_path = FileManager.full_path(filename) if activate else FileManager.default_style_file_path
+    FileManager.current_styles_file_path = Additionals.full_path(filename) if activate else FileManager.default_style_file_path
     if activate:
-      cls.extract_additional_styles()
-      labels = cls.additional_style_files(display_names=True, include_blank=False)
-      selected = FileManager.display_name(FileManager.current_styles_file_path)
+      FileManager.update_additional_style_files()
+      labels = Additionals.additional_style_files(display_names=True, include_blank=False)
+      selected = Additionals.display_name(FileManager.current_styles_file_path)
       selected = selected if selected in labels else labels[0] if len(labels)>0 else ''
       return gr.Row.update(visible=activate), FileManager.load_styles(), gr.Dropdown.update(choices=labels, value=selected)
     else:
       return gr.Row.update(visible=activate), FileManager.load_styles(), gr.Dropdown.update()
   
   @classmethod
-  def additional_style_files(cls, include_blank=True, display_names=False):
-    format = FileManager.display_name if display_names else FileManager.full_path
-    asf = [format(f) for f in os.listdir(FileManager.additional_style_files_directory) if f.endswith(".csv")]
-    return [format('')]+asf if include_blank else asf
-  
-  @classmethod
   def handle_create_additional_style_file_click(cls, name):
     FileManager.create_file_if_missing(name)
-    return gr.Dropdown.update(choices=cls.additional_style_files(display_names=True), value=FileManager.display_name(name))
+    return gr.Dropdown.update(choices=Additionals.additional_style_files(display_names=True), value=Additionals.display_name(name))
   
   @classmethod
   def handle_style_file_selection_change(cls, filepath):
-    FileManager.current_styles_file_path = FileManager.full_path(filepath)
+    FileManager.current_styles_file_path = Additionals.full_path(filepath)
     return FileManager.load_styles() 
   
   @classmethod
   def handle_merge_style_files_click(cls):
-    purged = [row for row in FileManager.load_styles(FileManager.default_style_file_path).to_numpy() if "::" not in row[1]]
-    for filepath in cls.additional_style_files(include_blank=False):
+    styles = [row for row in FileManager.load_styles(FileManager.default_style_file_path).to_numpy() if not Additionals.has_prefix(row[1])]
+    for filepath in Additionals.additional_style_files(include_blank=False):
       rows = FileManager.load_styles(filepath).to_numpy()
       if len(rows)>0:
-        prefix = FileManager.display_name(filepath) + "::"
+        prefix = Additionals.display_name(filepath)
         for row in rows:
-          row[1] = prefix + row[1]
-          purged.append(row)
+          row[1] = Additionals.merge_name(prefix, row[1])
+          styles.append(row)
       else:
         os.remove(filepath)
-    new_df = pd.DataFrame(purged, columns=cls.display_columns)
-    FileManager.save_styles(new_df, use_default=True)
+    FileManager.save_styles(pd.DataFrame(styles, columns=display_columns), use_default=True)
     return False
   
-  @staticmethod
-  def add_or_replace(array:np.ndarray, row, prefix:str):
-    row[1] = row[1][len(prefix):]
-    for i in range(len(array)):
-      if array[i][1] == row[1]:
-        array[i] = row
-        return array
-    return np.vstack([array,row])
-
-  @classmethod
-  def extract_additional_styles(cls):
-    prefixed_styles = [row for row in FileManager.load_styles(use_default=True).to_numpy() if "::" in row[1]]
-    for prefix in {row[1][:row[1].find('::')] for row in prefixed_styles}:
-      FileManager.create_file_if_missing(prefix)
-    for filepath in cls.additional_style_files(include_blank=False):
-      prefix = os.path.splitext(os.path.split(filepath)[1])[0] + "::"
-      additional_file_contents = FileManager.load_styles(FileManager.full_path(filepath)).to_numpy()
-      for prefixed_style in prefixed_styles:
-        if prefixed_style[1].startswith(prefix):
-          additional_file_contents = cls.add_or_replace(additional_file_contents, prefixed_style, prefix)
-      FileManager.save_styles(pd.DataFrame(additional_file_contents, columns=cls.display_columns), filename=filepath)
-  
-  @classmethod
-  def get_and_update_lasthash(cls) -> str:
-    try:
-      with open(os.path.join(FileManager.basedir, "lasthash.json")) as f:
-        lasthash = json.load(f)['lasthash']
-    except:
-      lasthash = ""
-    print(json.dumps({"lasthash":cls.githash}),file=open(os.path.join(FileManager.basedir, "lasthash.json"), 'w'))
-    return lasthash
-  
-  @classmethod
-  def start_backups(cls):
-    if cls.backup_thread is None:
-      cls.backup_thread = threading.Thread(group=None, target=cls.handle_backup, daemon=True)
-      cls.backup_thread.start()
-
-  @classmethod
-  def handle_backup(cls):
-    while True:
-      if cls.changed_since_backup:
-        FileManager.do_backup()
-        cls.changed_since_backup = False
-      time.sleep(cls.backup_delay)
-
   @classmethod
   def handle_use_encryption_checkbox_changed(cls, encrypt):
     FileManager.encrypt = encrypt
@@ -191,7 +136,7 @@ class StyleEditor:
   def handle_restore_backup_file_upload(cls, tempfile):
     error = FileManager.restore_from_backup(tempfile.name)
     if error is None:
-      cls.extract_additional_styles()
+      FileManager.update_additional_style_files()
       return gr.Text.update(visible=True, value="Styles restored"), False, FileManager.load_styles(use_default=True)
     else:
       return gr.Text.update(visible=True, value=error), False, FileManager.load_styles(use_default=True)
@@ -206,31 +151,31 @@ class StyleEditor:
       dummy_component = gr.Label(visible=False)
       with gr.Row():
         with gr.Column(scale=1, min_width=400):
-          with gr.Accordion(label="Documentation and Recent Changes", open=(cls.get_and_update_lasthash()!=cls.githash)):
+          with gr.Accordion(label="Documentation and Recent Changes", open=False):
             gr.HTML(value="<a href='https://github.com/chrisgoringe/Styles-Editor/blob/main/readme.md' target='_blank'>Link to Documentation</a>")
             gr.Markdown(value=cls.update_help)
             gr.HTML(value="<a href='https://github.com/chrisgoringe/Styles-Editor/blob/main/changes.md' target='_blank'>Change log</a>")
-        with gr.Column(scale=1, min_width=300):
+        with gr.Column(scale=1, min_width=400):
           with gr.Accordion(label="Encryption", open=False):
             cls.use_encryption_checkbox = gr.Checkbox(value=False, label="Use Encryption")
             cls.encryption_key_textbox = gr.Textbox(max_lines=1, placeholder="encryption key", label="Encryption Key")
             gr.Markdown(value="If checked, and a key is provided, backups are encrypted. The active style file and additional style files are not.")
             gr.Markdown(value="Files are encrypted using pyAesCrypt (https://pypi.org/project/pyAesCrypt/)")
-        with gr.Column(scale=1, min_width=300):
+        with gr.Column(scale=1, min_width=400):
           with gr.Accordion(label="Restore from Backup", open=False):
             gr.Markdown(value="If restoring from an encrypted backup, enter the encrption key under `Encryption` first.")
             cls.restore_backup_file_upload = gr.File(file_types=[".csv", ".aes"], label="Restore from backup")
             cls.restore_result = gr.Text(visible=False, label="Result:")
-        with gr.Column(scale=1, min_width=300):
+        with gr.Column(scale=1, min_width=400):
           with gr.Accordion(label="Filter view", open=False):
             cls.filter_textbox = gr.Textbox(max_lines=1, interactive=True, placeholder="filter", elem_id="style_editor_filter", show_label=False)
             cls.filter_select = gr.Dropdown(choices=["Exact match", "Case insensitive", "regex"], value="Exact match", show_label=False)
-        with gr.Column(scale=1, min_width=300):
+        with gr.Column(scale=1, min_width=400):
           with gr.Accordion(label="Search and replace", open=False):
             cls.search_box = gr.Textbox(max_lines=1, interactive=True, placeholder="search for", show_label=False)
             cls.replace_box= gr.Textbox(max_lines=1, interactive=True, placeholder="replace with", show_label=False)
             cls.search_and_replace_button = gr.Button(value="Search and Replace")
-        with gr.Column(scale=1, min_width=300):
+        with gr.Column(scale=1, min_width=400):
           pass
       with gr.Row():
         with gr.Column():
@@ -238,22 +183,17 @@ class StyleEditor:
             cls.use_additional_styles_checkbox = gr.Checkbox(value=False, label="Edit additional style files")
           with gr.Group(visible=False) as cls.additional_file_display:
             with gr.Row():
-              #with gr.Column(scale=1, min_width=200):
-                cls.style_file_selection = gr.Dropdown(choices=cls.additional_style_files(display_names=True), value=FileManager.display_name(''), 
-                                                       label="Additional Style File")
-              #with gr.Column(scale=1, min_width=200):
-                cls.create_additional_stylefile = gr.Button(value="Create new additional style file")
-              #with gr.Column(scale=1, min_width=200):
-                cls.merge_style_files_button = gr.Button(value="Merge into master")
-              #with gr.Column(scale=10):
-              #  pass
+              cls.style_file_selection = gr.Dropdown(choices=Additionals.additional_style_files(display_names=True), value=Additionals.display_name(''), 
+                                                      label="Additional Style File")
+              cls.create_additional_stylefile = gr.Button(value="Create new additional style file")
+              cls.merge_style_files_button = gr.Button(value="Merge into master")
       with gr.Row():
         with gr.Column(scale=1, min_width=150):
           cls.autosort_checkbox = gr.Checkbox(value=False, label="Autosort")
         with gr.Column(scale=10):
           pass
       with gr.Row():
-        cls.dataeditor = gr.Dataframe(value=FileManager.load_styles, col_count=(len(cls.display_columns),'fixed'), 
+        cls.dataeditor = gr.Dataframe(value=FileManager.load_styles, col_count=(len(display_columns),'fixed'), 
                                           wrap=True, max_rows=1000, show_label=False, interactive=True, elem_id="style_editor_grid")
       
       cls.search_and_replace_button.click(fn=cls.handle_search_and_replace_click, inputs=[cls.search_box, cls.replace_box, cls.dataeditor], outputs=cls.dataeditor)
@@ -272,7 +212,7 @@ class StyleEditor:
       cls.autosort_checkbox.change(fn=cls.handle_autosort_checkbox_change, inputs=[cls.dataeditor, cls.autosort_checkbox], outputs=cls.dataeditor)
 
       style_editor.load(fn=None, _js="when_loaded")
-      style_editor.load(fn=cls.start_backups, inputs=[], outputs=[])
+      style_editor.load(fn=cls.backup.start, inputs=[], outputs=[])
 
       cls.use_additional_styles_checkbox.change(fn=cls.handle_use_additional_styles_box_change, inputs=[cls.use_additional_styles_checkbox, cls.style_file_selection], 
                                                 outputs=[cls.additional_file_display, cls.dataeditor, cls.style_file_selection])

@@ -1,5 +1,9 @@
 # Recent changes
 
+## 30 June 2023
+- Delete from master list removes from additional style file as well
+- Major refactoring of code - sorry if I broke things, but it's going to be a lot easier going forward.
+
 ## 29 June 2023
 - Layout tweaks and minor fixes
 

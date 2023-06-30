@@ -1,5 +1,6 @@
 # A bunch of utility methods to load and save style files
 import pandas as pd
+import numpy as np
 import os, json
 from modules.shared import cmd_opts, opts, prompt_styles
 import modules.scripts as scripts
@@ -7,11 +8,10 @@ import shutil
 import datetime
 from pathlib import Path
 import pyAesCrypt
+from scripts.additionals import Additionals
+from scripts.shared import columns, user_columns, display_columns
 
 class FileManager:
-  columns = ['name','prompt','negative_prompt']
-  user_columns = ['prompt','negative_prompt','notes']
-
   basedir = scripts.basedir()
   additional_style_files_directory = os.path.join(basedir,"additonal_style_files")
   backup_directory = os.path.join(basedir,"backups")
@@ -26,6 +26,8 @@ class FileManager:
     default_style_file_path = getattr(opts, 'styles_dir', None)
   current_styles_file_path = default_style_file_path
 
+  Additionals.init(default_style_file_path=default_style_file_path, additional_style_files_directory=additional_style_files_directory)
+
   try:
     with open(os.path.join(basedir, "notes.json")) as f:
       notes_dictionary = json.load(f)
@@ -39,17 +41,17 @@ class FileManager:
   def load_styles(cls, filename=None, use_default=False) -> pd.DataFrame:
     filename = filename or (cls.default_style_file_path if use_default else cls.current_styles_file_path)
     try:
-      dataframe = pd.read_csv(filename, header=None, names=cls.columns, encoding="utf-8-sig",
+      dataframe = pd.read_csv(filename, header=None, names=columns, encoding="utf-8-sig",
                                   engine='python', skiprows=[0], usecols=[0,1,2])
     except:
-      dataframe = pd.DataFrame(columns=cls.columns)
-    display = cls.display_name(filename)
+      dataframe = pd.DataFrame(columns=columns)
+    display = Additionals.display_name(filename)
     entries = range(dataframe.shape[0])
     dataframe.insert(loc=0, column="sort", value=[i+1 for i in entries])
     dataframe.insert(loc=4, column="notes", value=[cls.lookup_notes(dataframe['name'][i], display) for i in entries])
     dataframe.fillna('', inplace=True)
     if len(dataframe)>0:
-      for column in cls.user_columns:
+      for column in user_columns:
         dataframe[column] = dataframe[column].str.replace('\n', '<br>',regex=False)
     return dataframe
   
@@ -70,18 +72,47 @@ class FileManager:
     clone = data.copy()
     cls.fix_duplicates(clone)
     if len(clone)>0:
-      for column in cls.user_columns:
+      for column in user_columns:
         clone[column] = clone[column].str.replace('<br>', '\n',regex=False)
-    clone.to_csv(filename, encoding="utf-8-sig", columns=cls.columns, index=False)
-    cls.update_notes_dictionary(data, cls.display_name(filename))
+    clone.to_csv(filename, encoding="utf-8-sig", columns=columns, index=False)
+    cls.update_notes_dictionary(data, Additionals.display_name(filename))
     cls.save_notes_dictionary()
     prompt_styles.reload()
   
-  @classmethod
-  def create_file_if_missing(cls, filename):
-    filename = cls.full_path(filename)
+  @staticmethod
+  def create_file_if_missing(filename):
+    filename = Additionals.full_path(filename)
     if not os.path.exists(filename):
       print("", file=open(filename,"w"))
+
+  @staticmethod
+  def add_or_replace(array:np.ndarray, row):
+    for i in range(len(array)):
+      if array[i][1] == row[1]:
+        array[i] = row
+        return array
+    return np.vstack([array,row])
+
+  @classmethod
+  def update_additional_style_files(cls):
+    additional_file_contents = { prefix : FileManager.load_styles(Additionals.full_path(prefix)).to_numpy() for prefix in Additionals.additional_style_files(include_blank=False, display_names=True) }
+    for _, row in cls.load_styles(use_default=True).iterrows():
+      prefix, row[1] = Additionals.split_stylename(row[1])
+      if prefix:
+        if prefix in additional_file_contents:
+          additional_file_contents[prefix] = cls.add_or_replace(additional_file_contents[prefix], row)
+        else:
+          additional_file_contents[prefix] = np.vstack([row])
+    for prefix in additional_file_contents:
+      cls.save_styles(pd.DataFrame(additional_file_contents[prefix], columns=display_columns), filename=Additionals.full_path(prefix))
+
+  @classmethod
+  def remove_from_additional(cls, prefixed_style):
+    prefix, style = Additionals.split_stylename(prefixed_style)
+    if prefix:
+      data = cls.load_styles(Additionals.full_path(prefix))
+      data = data.drop(index=[i for (i, row) in data.iterrows() if row[1]==style])
+      cls.save_styles(data, Additionals.full_path(prefix))
 
   @classmethod
   def do_backup(cls):
@@ -118,27 +149,6 @@ class FileManager:
       else:
         os.rename(cls.default_style_file_path+".temp", cls.default_style_file_path)
     return error
-
-  @classmethod
-  def full_path(cls, filename:str) -> str:
-    """
-    Return the full path for an additional style file.
-    Input can be the full path, the filename with extension, or the filename without extension.
-    If input is None, '', or the default style file path, return the default style file path
-    """
-    if filename is None or filename=='' or filename==cls.default_style_file_path:
-      return cls.default_style_file_path
-    filename = filename+".csv" if not filename.endswith(".csv") else filename
-    return os.path.relpath(os.path.join(cls.additional_style_files_directory,os.path.split(filename)[1]))
-                           
-  @classmethod
-  def display_name(cls, filename:str) -> str:
-    """
-    Return the full path for an additional style file. 
-    Input can be the full path, the filename with extension, or the filename without extension
-    """
-    fullpath = cls.full_path(filename)
-    return os.path.splitext(os.path.split(fullpath)[1])[0] if fullpath!=cls.default_style_file_path else ''
   
   @classmethod
   def save_notes_dictionary(cls):
@@ -146,9 +156,9 @@ class FileManager:
 
   @classmethod
   def update_notes_dictionary(cls, data:pd.DataFrame, prefix:str):
-    for row in data.iterrows():
-      stylename = prefix+"::"+row[1][1] if prefix!='' else row[1][1]
-      cls.notes_dictionary[stylename] = row[1][4]
+    for _, row in data.iterrows():
+      stylename = prefix+"::"+row[1] if prefix!='' else row[1]
+      cls.notes_dictionary[stylename] = row[4]
 
   @classmethod
   def lookup_notes(cls, stylename, prefix):

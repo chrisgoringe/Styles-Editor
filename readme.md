@@ -32,7 +32,7 @@ Enter a search term and a replace term and press the button...
 Click on a cell to select it, then use Ctrl-X, C and V.
 
 ### Delete styles
-Right-click on a style to select that row. Then hit `backspace` or `delete`. If you are using [additional style files](./additional_style_files.md) you need to delete the style in the additional style file, not the master style file.
+Right-click on a style to select that row. Then hit `backspace` or `delete`. 
 
 ### Add styles
 Use the `New row` button, and then edit the boxes as you need. Note that if you have a filter applied the new row probably won't appear because it is empty, so best not to do that.
