@@ -9,7 +9,7 @@ import datetime
 from pathlib import Path
 import pyAesCrypt
 from scripts.additionals import Additionals
-from scripts.shared import columns, user_columns, display_columns
+from scripts.shared import columns, user_columns, display_columns, d_types
 
 class FileManager:
   basedir = scripts.basedir()
@@ -41,7 +41,7 @@ class FileManager:
   def load_styles(cls, filename=None, use_default=False) -> pd.DataFrame:
     filename = filename or (cls.default_style_file_path if use_default else cls.current_styles_file_path)
     try:
-      dataframe = pd.read_csv(filename, header=None, names=columns, encoding="utf-8-sig",
+      dataframe = pd.read_csv(filename, header=None, names=columns, encoding="utf-8-sig", dtype=d_types,
                                   engine='python', skiprows=[0], usecols=[0,1,2])
     except:
       dataframe = pd.DataFrame(columns=columns)
