@@ -5,16 +5,15 @@ If you have a lot of styles you might find it useful to break them up into categ
 Any style that is in an additional style file gets renamed to `filename::stylename`. So if you put a style `Picasso` into an additional style file `Artists`, it will now have the name `Artists::Picasso`. 
 
 ## Creating and removing additional style files
-Tick the `Edit additional style files` box, then use `Create new additional style file` to create the categories you want. 
+Tick the `Edit additional style files` box, then use `--Create New--` in the dropdown menu to create the categories you want. 
 
 Alternatively, add the prefix `title::` to a style in the master view: the additional style file `title` will be created for you when you next tick the `Edit additional style files` box.
 
-Empty additional style files are removed when you merge.
+Empty additional style files are removed when you uncheck the `Edit additional style files` box.
 
 ## Saving
-`Merge into master` saves the contents of the additional style files into the master style file. If you don't merge, the changes will be retained in the additional style file, but not available for use.
+The additional style files are autosaved as you edit. They are merged into the master style file when you uncheck the `Edit additional style files` box.
 
 ## Moving styles to an additional style file
-In the master view (`Edit additional style files` box unticked) styles are shown in the `filename::stylename` format. You can manually edit the style name to move it to an additional style file.
-
+In the master view (`Edit additional style files` box unticked) styles are shown in the `filename::stylename` format. You can manually edit the style name to move it to an additional style file. At present, if you move it from one additional style to another, it will end up in both. https://github.com/chrisgoringe/Styles-Editor/issues/70
 

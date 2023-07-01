@@ -38,7 +38,7 @@ Right-click on a style to select that row. Then hit `backspace` or `delete`.
 Use the `New row` button, and then edit the boxes as you need. Note that if you have a filter applied the new row probably won't appear because it is empty, so best not to do that.
 
 ### Save styles
-Styles are saved automatically. If you are using [additional style files](./additional_style_files.md) you need to use the merge files button.
+Styles are saved automatically. If you are using [additional style files](./additional_style_files.md), the additional files are merged into the master when you uncheck `Edit additional...`.
 
 ### Filter view
 Type into the filter text box to only show rows matching the text string. Matches from any of the columns. Filter can be set to Exact match, case insensitive, or regex.

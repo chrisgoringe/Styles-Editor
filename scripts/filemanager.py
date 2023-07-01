@@ -48,8 +48,8 @@ class FileManager:
     display = Additionals.display_name(filename)
     entries = range(dataframe.shape[0])
     dataframe.insert(loc=0, column="sort", value=[i+1 for i in entries])
-    dataframe.insert(loc=4, column="notes", value=[cls.lookup_notes(dataframe['name'][i], display) for i in entries])
     dataframe.fillna('', inplace=True)
+    dataframe.insert(loc=4, column="notes", value=[cls.lookup_notes(dataframe['name'][i], display) for i in entries])
     if len(dataframe)>0:
       for column in user_columns:
         dataframe[column] = dataframe[column].str.replace('\n', '<br>',regex=False)
@@ -95,7 +95,7 @@ class FileManager:
 
   @classmethod
   def update_additional_style_files(cls):
-    additional_file_contents = { prefix : FileManager.load_styles(Additionals.full_path(prefix)).to_numpy() for prefix in Additionals.additional_style_files(include_blank=False, display_names=True) }
+    additional_file_contents = { prefix : FileManager.load_styles(Additionals.full_path(prefix)).to_numpy() for prefix in Additionals.additional_style_files(include_new=False, display_names=True) }
     for _, row in cls.load_styles(use_default=True).iterrows():
       prefix, row[1] = Additionals.split_stylename(row[1])
       if prefix:
@@ -105,6 +105,20 @@ class FileManager:
           additional_file_contents[prefix] = np.vstack([row])
     for prefix in additional_file_contents:
       cls.save_styles(pd.DataFrame(additional_file_contents[prefix], columns=display_columns), filename=Additionals.full_path(prefix))
+
+  @classmethod
+  def merge_additional_style_files(cls):
+    styles = [row for row in cls.load_styles(cls.default_style_file_path).to_numpy() if not Additionals.has_prefix(row[1])]
+    for filepath in Additionals.additional_style_files(include_new=False, display_names=False):
+      rows = cls.load_styles(filepath).to_numpy()
+      if len(rows)>0:
+        prefix = Additionals.display_name(filepath)
+        for row in rows:
+          row[1] = Additionals.merge_name(prefix, row[1])
+          styles.append(row)
+      else:
+        os.remove(filepath)
+    cls.save_styles(pd.DataFrame(styles, columns=display_columns), use_default=True)
 
   @classmethod
   def remove_from_additional(cls, prefixed_style):
