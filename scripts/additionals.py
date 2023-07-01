@@ -55,7 +55,7 @@ class Additionals:
     return os.path.splitext(os.path.split(fullpath)[1])[0] if fullpath!=cls.default_style_file_path else ''
   
   @classmethod
-  def additional_style_files(cls, include_blank=True, display_names=False):
+  def additional_style_files(cls, include_new, display_names):
     format = cls.display_name if display_names else cls.full_path
     additional_style_files = [format(f) for f in os.listdir(cls.additional_style_files_directory) if f.endswith(".csv")]
-    return [format('')]+additional_style_files if include_blank else additional_style_files
+    return additional_style_files+["--Create New--"] if include_new else additional_style_files

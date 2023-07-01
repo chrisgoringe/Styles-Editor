@@ -26,12 +26,11 @@ class Script(scripts.Script):
 class StyleEditor:
   update_help = """# Recent changes:
 ## Changed in this update:
-- Delete from master list removes from additional style file as well
-- Significant refactoring. 
+- Create new additional style file moved to the dropdown
+- Merge into master now automatic when you uncheck the `Edit additional` box
 
 ## Changed in recent updates:
-- Layout tweaks
-- Improved handling of backup restore errors - Restore from backups
+- Delete from master list removes from additional style file as well
 - Option to encrypt backups
 - Restored the `notes` column
 - Automatically create new Additional Style Files if needed
@@ -92,37 +91,22 @@ class StyleEditor:
     FileManager.current_styles_file_path = Additionals.full_path(filename) if activate else FileManager.default_style_file_path
     if activate:
       FileManager.update_additional_style_files()
-      labels = Additionals.additional_style_files(display_names=True, include_blank=False)
+      labels = Additionals.additional_style_files(display_names=True, include_new=True)
       selected = Additionals.display_name(FileManager.current_styles_file_path)
       selected = selected if selected in labels else labels[0] if len(labels)>0 else ''
       return gr.Row.update(visible=activate), FileManager.load_styles(), gr.Dropdown.update(choices=labels, value=selected)
     else:
+      FileManager.merge_additional_style_files()
       return gr.Row.update(visible=activate), FileManager.load_styles(), gr.Dropdown.update()
   
   @classmethod
-  def handle_create_additional_style_file_click(cls, name):
-    FileManager.create_file_if_missing(name)
-    return gr.Dropdown.update(choices=Additionals.additional_style_files(display_names=True), value=Additionals.display_name(name))
-  
-  @classmethod
-  def handle_style_file_selection_change(cls, filepath):
-    FileManager.current_styles_file_path = Additionals.full_path(filepath)
-    return FileManager.load_styles() 
-  
-  @classmethod
-  def handle_merge_style_files_click(cls):
-    styles = [row for row in FileManager.load_styles(FileManager.default_style_file_path).to_numpy() if not Additionals.has_prefix(row[1])]
-    for filepath in Additionals.additional_style_files(include_blank=False):
-      rows = FileManager.load_styles(filepath).to_numpy()
-      if len(rows)>0:
-        prefix = Additionals.display_name(filepath)
-        for row in rows:
-          row[1] = Additionals.merge_name(prefix, row[1])
-          styles.append(row)
-      else:
-        os.remove(filepath)
-    FileManager.save_styles(pd.DataFrame(styles, columns=display_columns), use_default=True)
-    return False
+  def handle_style_file_selection_change(cls, prefix, _):
+    if prefix:
+      FileManager.create_file_if_missing(prefix)
+      FileManager.current_styles_file_path = Additionals.full_path(prefix)
+    else:
+      prefix = Additionals.display_name(FileManager.current_styles_file_path)
+    return FileManager.load_styles(), gr.Dropdown.update(choices=Additionals.additional_style_files(display_names=True, include_new=True), value=prefix)
   
   @classmethod
   def handle_use_encryption_checkbox_changed(cls, encrypt):
@@ -183,17 +167,18 @@ class StyleEditor:
             cls.use_additional_styles_checkbox = gr.Checkbox(value=False, label="Edit additional style files")
           with gr.Group(visible=False) as cls.additional_file_display:
             with gr.Row():
-              cls.style_file_selection = gr.Dropdown(choices=Additionals.additional_style_files(display_names=True), value=Additionals.display_name(''), 
-                                                      label="Additional Style File")
-              cls.create_additional_stylefile = gr.Button(value="Create new additional style file")
-              cls.merge_style_files_button = gr.Button(value="Merge into master")
+              with gr.Column(scale=1, min_width=400):
+                cls.style_file_selection = gr.Dropdown(choices=Additionals.additional_style_files(display_names=True, include_new=True), value=Additionals.display_name(''), 
+                                                      label="Additional Style File", scale=1, min_width=200)
+              with gr.Column(scale=4):
+                pass
       with gr.Row():
         with gr.Column(scale=1, min_width=150):
           cls.autosort_checkbox = gr.Checkbox(value=False, label="Autosort")
         with gr.Column(scale=10):
           pass
       with gr.Row():
-        cls.dataeditor = gr.Dataframe(value=FileManager.load_styles, col_count=(len(display_columns),'fixed'), 
+        cls.dataeditor = gr.Dataframe(value=FileManager.load_styles(), col_count=(len(display_columns),'fixed'), 
                                           wrap=True, max_rows=1000, show_label=False, interactive=True, elem_id="style_editor_grid")
       
       cls.search_and_replace_button.click(fn=cls.handle_search_and_replace_click, inputs=[cls.search_box, cls.replace_box, cls.dataeditor], outputs=cls.dataeditor)
@@ -216,9 +201,9 @@ class StyleEditor:
 
       cls.use_additional_styles_checkbox.change(fn=cls.handle_use_additional_styles_box_change, inputs=[cls.use_additional_styles_checkbox, cls.style_file_selection], 
                                                 outputs=[cls.additional_file_display, cls.dataeditor, cls.style_file_selection])
-      cls.create_additional_stylefile.click(fn=cls.handle_create_additional_style_file_click, inputs=dummy_component, outputs=cls.style_file_selection, _js="new_style_file_dialog")
-      cls.style_file_selection.change(fn=cls.handle_style_file_selection_change, inputs=cls.style_file_selection, outputs=cls.dataeditor)
-      cls.merge_style_files_button.click(fn=cls.handle_merge_style_files_click, outputs=cls.use_additional_styles_checkbox)
+      cls.style_file_selection.change(fn=cls.handle_style_file_selection_change, inputs=[cls.style_file_selection, dummy_component], 
+                                      outputs=[cls.dataeditor,cls.style_file_selection], _js="style_file_selection_change")
+
 
     return [(style_editor, "Style Editor", "style_editor")]
 

@@ -104,7 +104,14 @@ function filter_style_list(filter_text, type) {
         if (vis || header) { row.style.display = '' } else { row.style.display='none' }
         header = false;
     }
-    return (filter_text, type);
+    return [filter_text, type]
+}
+
+function style_file_selection_change(x,y) {
+    if (x==='--Create New--') {
+        return [new_style_file_dialog(''),'']
+    }
+    return [x,'']
 }
 
 function new_style_file_dialog(x) {
