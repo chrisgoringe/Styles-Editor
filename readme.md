@@ -45,7 +45,7 @@ Type into the filter text box to only show rows matching the text string. Matche
 If filtering by regex, if an invalid regex is entered it will be highlighted in red.
 
 ### Sorting
-The `sort` column is automatically generated whenever you save or load. If you select `autosort` the table will automatically sort whenever you change any `sort` value (as long as every `sort` value is numeric). 
+The `sort` column is automatically generated whenever you save or load. If you select `autosort` (under `Advanced`) the table will automatically sort whenever you change any `sort` value (as long as every `sort` value is numeric). 
 
 ### Notes 
 You can put whatever you want in the notes column. 
