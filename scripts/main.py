@@ -29,6 +29,7 @@ class StyleEditor:
 - Create new additional style file moved to the dropdown
 - Merge into master now automatic when you uncheck the `Edit additional` box
 - Add a subtle color shading to indicate filter and encryption are active even when closed
+- Moved `Use additional` and `Autosort` checkboxes into `Advanced`
 
 ## Changed in recent updates:
 - Delete from master list removes from additional style file as well
@@ -162,23 +163,13 @@ class StyleEditor:
             cls.replace_box= gr.Textbox(max_lines=1, interactive=True, placeholder="replace with", show_label=False)
             cls.search_and_replace_button = gr.Button(value="Search and Replace")
         with gr.Column(scale=1, min_width=400):
-          pass
-      with gr.Row():
-        with gr.Column():
-          with gr.Row():
+          with gr.Accordion(label="Advanced options", open=False):
             cls.use_additional_styles_checkbox = gr.Checkbox(value=False, label="Edit additional style files")
-          with gr.Group(visible=False) as cls.additional_file_display:
-            with gr.Row():
-              with gr.Column(scale=1, min_width=400):
-                cls.style_file_selection = gr.Dropdown(choices=Additionals.additional_style_files(display_names=True, include_new=True), value=Additionals.display_name(''), 
-                                                      label="Additional Style File", scale=1, min_width=200)
-              with gr.Column(scale=4):
-                pass
-      with gr.Row():
-        with gr.Column(scale=1, min_width=150):
-          cls.autosort_checkbox = gr.Checkbox(value=False, label="Autosort")
-        with gr.Column(scale=10):
-          pass
+            cls.autosort_checkbox = gr.Checkbox(value=False, label="Autosort")
+            with gr.Group(visible=False) as cls.additional_file_display:
+              cls.style_file_selection = gr.Dropdown(choices=Additionals.additional_style_files(display_names=True, include_new=True), 
+                                                    value=Additionals.display_name(''), 
+                                                    label="Additional Style File", scale=1, min_width=200)
       with gr.Row():
         cls.dataeditor = gr.Dataframe(value=FileManager.load_styles(), col_count=(len(display_columns),'fixed'), 
                                           wrap=True, max_rows=1000, show_label=False, interactive=True, elem_id="style_editor_grid")

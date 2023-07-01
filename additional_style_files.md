@@ -1,5 +1,5 @@
 # Working with additional style files
-If you have a lot of styles you might find it useful to break them up into categories. This functionality is available through the `Edit additional style files` checkbox. These additional style files are stored (as `.csv`) in `extensions/Styles-Editor/additonal_style_files`.
+If you have a lot of styles you might find it useful to break them up into categories. This functionality is available through the `Edit additional style files` checkbox (under `Advanced`). These additional style files are stored (as `.csv`) in `extensions/Styles-Editor/additonal_style_files`.
 
 ## Basic idea
 Any style that is in an additional style file gets renamed to `filename::stylename`. So if you put a style `Picasso` into an additional style file `Artists`, it will now have the name `Artists::Picasso`. 

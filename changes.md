@@ -5,6 +5,7 @@
 - Removed `merge into master` - now it happens automatically when `Edit additional` is unchecked
 - Fixed a crashing bug when a style had no name
 - Added a subtle color shading to indicate filter and encryption are active even when closed
+- Moved checkboxes to an `Advanced Options` accordian
 
 ## 30 June 2023
 - Delete from master list removes from additional style file as well
