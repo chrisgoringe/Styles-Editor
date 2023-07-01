@@ -28,6 +28,7 @@ class StyleEditor:
 ## Changed in this update:
 - Create new additional style file moved to the dropdown
 - Merge into master now automatic when you uncheck the `Edit additional` box
+- Add a subtle color shading to indicate filter and encryption are active even when closed
 
 ## Changed in recent updates:
 - Delete from master list removes from additional style file as well
@@ -111,6 +112,7 @@ class StyleEditor:
   @classmethod
   def handle_use_encryption_checkbox_changed(cls, encrypt):
     FileManager.encrypt = encrypt
+    return ""
 
   @classmethod
   def handle_encryption_key_change(cls, key):
@@ -140,7 +142,7 @@ class StyleEditor:
             gr.Markdown(value=cls.update_help)
             gr.HTML(value="<a href='https://github.com/chrisgoringe/Styles-Editor/blob/main/changes.md' target='_blank'>Change log</a>")
         with gr.Column(scale=1, min_width=400):
-          with gr.Accordion(label="Encryption", open=False):
+          with gr.Accordion(label="Encryption", open=False, elem_id="style_editor_encryption_accordian"):
             cls.use_encryption_checkbox = gr.Checkbox(value=False, label="Use Encryption")
             cls.encryption_key_textbox = gr.Textbox(max_lines=1, placeholder="encryption key", label="Encryption Key")
             gr.Markdown(value="If checked, and a key is provided, backups are encrypted. The active style file and additional style files are not.")
@@ -151,7 +153,7 @@ class StyleEditor:
             cls.restore_backup_file_upload = gr.File(file_types=[".csv", ".aes"], label="Restore from backup")
             cls.restore_result = gr.Text(visible=False, label="Result:")
         with gr.Column(scale=1, min_width=400):
-          with gr.Accordion(label="Filter view", open=False):
+          with gr.Accordion(label="Filter view", open=False, elem_id="style_editor_filter_accordian"):
             cls.filter_textbox = gr.Textbox(max_lines=1, interactive=True, placeholder="filter", elem_id="style_editor_filter", show_label=False)
             cls.filter_select = gr.Dropdown(choices=["Exact match", "Case insensitive", "regex"], value="Exact match", show_label=False)
         with gr.Column(scale=1, min_width=400):
@@ -186,7 +188,7 @@ class StyleEditor:
       cls.filter_textbox.change(fn=None, inputs=[cls.filter_textbox, cls.filter_select], _js="filter_style_list")
       cls.filter_select.change(fn=None, inputs=[cls.filter_textbox, cls.filter_select], _js="filter_style_list")
 
-      cls.use_encryption_checkbox.change(fn=cls.handle_use_encryption_checkbox_changed, inputs=[cls.use_encryption_checkbox], outputs=[])
+      cls.use_encryption_checkbox.change(fn=cls.handle_use_encryption_checkbox_changed, inputs=[cls.use_encryption_checkbox], outputs=[dummy_component], _js="encryption_change")
       cls.encryption_key_textbox.change(fn=cls.handle_encryption_key_change, inputs=[cls.encryption_key_textbox], outputs=[])
       cls.restore_backup_file_upload.upload(fn=cls.handle_restore_backup_file_upload, inputs=[cls.restore_backup_file_upload], outputs=[cls.restore_result, cls.use_additional_styles_checkbox, cls.dataeditor])
       cls.restore_backup_file_upload.clear(fn=cls.handle_restore_backup_file_clear, inputs=[], outputs=[cls.restore_result])
