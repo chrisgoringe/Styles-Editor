@@ -79,6 +79,16 @@ function update(target, text) {
     }, 10);
 }
 
+function encryption_change(value) {
+    accordian_style = document.getElementById('style_editor_encryption_accordian').style;
+    if (value) {
+        accordian_style.color = "#f88";
+    } else {
+        accordian_style.color = "white";
+    }
+    return value
+}
+
 function filter_style_list(filter_text, type) {
     if (type=="regex") { 
         filter = document.getElementById('style_editor_filter').firstElementChild.lastElementChild;
@@ -90,6 +100,12 @@ function filter_style_list(filter_text, type) {
             re = new RegExp();
             filter.style.color="red";
         } 
+    }
+    accordian_style = document.getElementById('style_editor_filter_accordian').style;
+    if (filter_text==="") {
+        accordian_style.color = "white";
+    } else {
+        accordian_style.color = "#f88";
     }
     rows = document.getElementById('style_editor_grid').querySelectorAll("tr");
     header = true;
