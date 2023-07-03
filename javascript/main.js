@@ -1,4 +1,13 @@
+function api_post(path, payload, callback) {
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", path, false);
+    xhr.onreadystatechange = function() { if (xhr.readyState === 4 && xhr.status === 200) { callback(JSON.parse(xhr.responseText)); } }
+    xhr.setRequestHeader("Content-type", "application/json");
+    xhr.send(JSON.stringify(payload));
+}
+
 function when_loaded() {
+    api_post("/style-editor/check-api/", {}, function(x) { console.log( "Style Editor Check API", x['value'] )});
     document.getElementById('style_editor_grid').addEventListener('keydown', function(event){
         if (event.ctrlKey === true) {
             event.stopImmediatePropagation();
@@ -21,7 +30,13 @@ function when_loaded() {
 
         // if backspace or delete are pressed, and we're over the selected row, delete it
         if (event.key === "Backspace" || event.key === "Delete") { 
-            if (event.target.closest("tr") === globalThis.selectedRow) { update(globalThis.selectedRow.querySelector("td"),"!!!"); }
+            if (globalThis.selectedRow) { 
+                {
+                    api_post("/style-editor/delete-style", 
+                         {"value":row_style_name(globalThis.selectedRow)}, 
+                         function(x){document.getElementById("style_editor_handle_api").click()} );
+                }
+            }
         } 
 
         // if we get to here, stop the keypress from propogating
@@ -38,6 +53,10 @@ function when_loaded() {
     document.getElementById('style_editor_grid').addEventListener('click', function(event){
         unselect_row()
     }, { capture: true });
+}
+
+function row_style_name(row) {
+    return row.querySelectorAll("td")[1].querySelector("span").textContent;
 }
 
 function select_row(row) {

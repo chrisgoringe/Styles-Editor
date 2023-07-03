@@ -1,9 +1,11 @@
 import gradio as gr
+from fastapi import FastAPI
+from pydantic import BaseModel
 import modules.scripts as scripts
 from modules import script_callbacks
 
 import pandas as pd
-import os
+import threading
 
 from scripts.filemanager import FileManager
 from scripts.additionals import Additionals
@@ -23,23 +25,26 @@ class Script(scripts.Script):
   def ui(self, is_img2img):
     return ()
 
+class ParameterString(BaseModel):
+  value: str
+
+class ParameterBool(BaseModel):
+  value: bool
+
 class StyleEditor:
   update_help = """# Recent changes:
 ## Changed in this update:
-- Create new additional style file moved to the dropdown
-- Merge into master now automatic when you uncheck the `Edit additional` box
-- Add a subtle color shading to indicate filter and encryption are active even when closed
-- Moved `Use additional` and `Autosort` checkboxes into `Advanced`
+- Delete style now uses API
 
 ## Changed in recent updates:
-- Delete from master list removes from additional style file as well
-- Option to encrypt backups
-- Restored the `notes` column
-- Automatically create new Additional Style Files if needed
-- Automatically delete empty Additional Style Files on merge
+- Create new additional style file moved to the dropdown
+- Merge into master now automatic when you uncheck the `Edit additional` box
+- Moved `Use additional` and `Autosort` checkboxes into `Advanced`
 
 """
   backup = Background(FileManager.do_backup, 600)
+  api_calls_outstanding = []
+  api_lock = threading.Lock()
 
   @staticmethod
   def _to_numeric(series:pd.Series):
@@ -54,13 +59,6 @@ class StyleEditor:
         return data.sort_values(by='sort', axis='index', inplace=False, na_position='first', key=cls._to_numeric)
       except:
         return data
-  
-  @classmethod
-  def _drop_deleted(cls, data:pd.DataFrame) -> pd.DataFrame:
-    rows_to_drop = [i for (i, row) in data.iterrows() if row[0]=='!!!']
-    for style in [row[1] for (_, row) in data.iterrows() if row[0]=='!!!']:
-      FileManager.remove_from_additional(style)
-    return data.drop(index=rows_to_drop)
       
   @classmethod
   def handle_autosort_checkbox_change(cls, data:pd.DataFrame, autosort) -> pd.DataFrame:
@@ -72,7 +70,6 @@ class StyleEditor:
   @classmethod
   def handle_dataeditor_input(cls, data:pd.DataFrame, autosort) -> pd.DataFrame:
     cls.backup.set_pending()
-    data = cls._drop_deleted(data)
     data = cls._sort_dataset(data) if autosort else data
     FileManager.save_styles(data)
     return data
@@ -131,12 +128,26 @@ class StyleEditor:
   @classmethod
   def handle_restore_backup_file_clear(cls):
     return gr.Text.update(visible=False)
+  
+  @classmethod
+  def handle_outstanding_api_calls(cls, data:pd.DataFrame):
+    with cls.api_lock:
+      for call in cls.api_calls_outstanding:
+        if call[0]=="delete":
+          rows_to_drop = [i for (i, row) in data.iterrows() if row[1]==call[1]]
+          for style in [row[1] for (_, row) in data.iterrows() if row[1]==call[1]]:
+            FileManager.remove_from_additional(style)
+          data = data.drop(index=rows_to_drop)
+      cls.api_calls_outstanding = []
+    FileManager.save_styles(data)
+    return data
 
   @classmethod
   def on_ui_tabs(cls):
     with gr.Blocks(analytics_enabled=False) as style_editor:
       dummy_component = gr.Label(visible=False)
       with gr.Row():
+        cls.do_api = gr.Button(visible=False, elem_id="style_editor_handle_api")
         with gr.Column(scale=1, min_width=400):
           with gr.Accordion(label="Documentation and Recent Changes", open=False):
             gr.HTML(value="<a href='https://github.com/chrisgoringe/Styles-Editor/blob/main/readme.md' target='_blank'>Link to Documentation</a>")
@@ -197,11 +208,21 @@ class StyleEditor:
       cls.style_file_selection.change(fn=cls.handle_style_file_selection_change, inputs=[cls.style_file_selection, dummy_component], 
                                       outputs=[cls.dataeditor,cls.style_file_selection], _js="style_file_selection_change")
 
+      cls.do_api.click(fn=cls.handle_outstanding_api_calls,inputs=cls.dataeditor,outputs=cls.dataeditor)
 
     return [(style_editor, "Style Editor", "style_editor")]
 
   @classmethod
-  def on_app_started(cls, block, fastapi):
+  def on_app_started(cls, block:gr.Blocks, api:FastAPI):
+
+    @api.post("/style-editor/delete-style/")
+    def delete_style(stylename:ParameterString):
+      cls.api_calls_outstanding.append(("delete",stylename.value))
+
+    @api.post("/style-editor/check-api/")
+    def check() -> ParameterBool:
+      return ParameterBool(value=True)
+
     with block:
       for tabs in block.children:
         if isinstance(tabs, gr.layouts.Tabs):
