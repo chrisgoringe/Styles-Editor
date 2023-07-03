@@ -35,6 +35,7 @@ class StyleEditor:
   update_help = """# Recent changes:
 ## Changed in this update:
 - Delete style now uses API
+- Ctrl-right-click to select multiple rows
 
 ## Changed in recent updates:
 - Create new additional style file moved to the dropdown
