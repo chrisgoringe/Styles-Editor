@@ -32,7 +32,7 @@ function when_loaded() {
         if (event.key === "Backspace" || event.key === "Delete") { 
             if (globalThis.selectedRow) { 
                 api_post("/style-editor/delete-style", 
-                         {"style":row_style_name(globalThis.selectedRow)}, 
+                         {"value":row_style_name(globalThis.selectedRow)}, 
                          function(x){document.getElementById("style_editor_handle_api").click()} );
             }
         } 
