@@ -25,23 +25,21 @@ class Script(scripts.Script):
   def ui(self, is_img2img):
     return ()
 
-class StyleName(BaseModel):
-  style: str
+class ParameterString(BaseModel):
+  value: str
+
+class ParameterBool(BaseModel):
+  value: bool
 
 class StyleEditor:
   update_help = """# Recent changes:
 ## Changed in this update:
-- Create new additional style file moved to the dropdown
-- Merge into master now automatic when you uncheck the `Edit additional` box
-- Add a subtle color shading to indicate filter and encryption are active even when closed
-- Moved `Use additional` and `Autosort` checkboxes into `Advanced`
+- Delete style now uses API
 
 ## Changed in recent updates:
-- Delete from master list removes from additional style file as well
-- Option to encrypt backups
-- Restored the `notes` column
-- Automatically create new Additional Style Files if needed
-- Automatically delete empty Additional Style Files on merge
+- Create new additional style file moved to the dropdown
+- Merge into master now automatic when you uncheck the `Edit additional` box
+- Moved `Use additional` and `Autosort` checkboxes into `Advanced`
 
 """
   backup = Background(FileManager.do_backup, 600)
@@ -218,8 +216,12 @@ class StyleEditor:
   def on_app_started(cls, block:gr.Blocks, api:FastAPI):
 
     @api.post("/style-editor/delete-style/")
-    def delete_style(stylename:StyleName):
-      cls.api_calls_outstanding.append(("delete",stylename.style))
+    def delete_style(stylename:ParameterString):
+      cls.api_calls_outstanding.append(("delete",stylename.value))
+
+    @api.post("/style-editor/check-api/")
+    def check() -> ParameterBool:
+      return ParameterBool(True)
 
     with block:
       for tabs in block.children:

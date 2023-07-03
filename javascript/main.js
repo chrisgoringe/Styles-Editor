@@ -3,10 +3,11 @@ function api_post(path, payload, callback) {
     xhr.open("POST", path, false);
     xhr.onreadystatechange = function() { if (xhr.readyState === 4 && xhr.status === 200) { callback(xhr.responseText); } }
     xhr.setRequestHeader("Content-type", "application/json");
-    xhr.send(payload);
+    xhr.send(JSON.stringify(payload));
 }
 
 function when_loaded() {
+    api_post("/style-editor/check-api/", {}, function(x) { alert(x); });
     document.getElementById('style_editor_grid').addEventListener('keydown', function(event){
         if (event.ctrlKey === true) {
             event.stopImmediatePropagation();
@@ -31,7 +32,7 @@ function when_loaded() {
         if (event.key === "Backspace" || event.key === "Delete") { 
             if (globalThis.selectedRow) { 
                 api_post("/style-editor/delete-style", 
-                         JSON.stringify({"style":row_style_name(globalThis.selectedRow)}), 
+                         {"style":row_style_name(globalThis.selectedRow)}, 
                          function(x){document.getElementById("style_editor_handle_api").click()} );
             }
         } 
