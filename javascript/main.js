@@ -7,7 +7,7 @@ function api_post(path, payload, callback) {
 }
 
 function when_loaded() {
-    api_post("/style-editor/check-api/", {}, function(x) { alert(x); });
+    api_post("/style-editor/check-api/", {}, function(x) { console.log( "Style Editor Check API", x['value'] )});
     document.getElementById('style_editor_grid').addEventListener('keydown', function(event){
         if (event.ctrlKey === true) {
             event.stopImmediatePropagation();
@@ -31,9 +31,11 @@ function when_loaded() {
         // if backspace or delete are pressed, and we're over the selected row, delete it
         if (event.key === "Backspace" || event.key === "Delete") { 
             if (globalThis.selectedRow) { 
-                api_post("/style-editor/delete-style", 
+                {
+                    api_post("/style-editor/delete-style", 
                          {"value":row_style_name(globalThis.selectedRow)}, 
                          function(x){document.getElementById("style_editor_handle_api").click()} );
+                }
             }
         } 
 
