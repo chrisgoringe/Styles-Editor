@@ -221,7 +221,7 @@ class StyleEditor:
 
     @api.post("/style-editor/check-api/")
     def check() -> ParameterBool:
-      return ParameterBool(True)
+      return ParameterBool(value=True)
 
     with block:
       for tabs in block.children:
