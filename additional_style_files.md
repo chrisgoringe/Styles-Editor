@@ -14,6 +14,6 @@ Empty additional style files are removed when you uncheck the `Edit additional s
 ## Saving
 The additional style files are autosaved as you edit. They are merged into the master style file when you uncheck the `Edit additional style files` box.
 
-## Moving styles to an additional style file
-In the master view (`Edit additional style files` box unticked) styles are shown in the `filename::stylename` format. You can manually edit the style name to move it to an additional style file. At present, if you move it from one additional style to another, it will end up in both. https://github.com/chrisgoringe/Styles-Editor/issues/70
+## Moving styles to or between an additional style file
+Select style or styles (with right click) then press `M` and enter the new prefix.
 

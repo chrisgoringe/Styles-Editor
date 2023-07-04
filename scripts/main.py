@@ -1,6 +1,9 @@
 import gradio as gr
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from typing import Tuple
 import modules.scripts as scripts
 from modules import script_callbacks
 
@@ -34,10 +37,10 @@ class ParameterBool(BaseModel):
 class StyleEditor:
   update_help = """# Recent changes:
 ## Changed in this update:
-- Delete style now uses API
-- Ctrl-right-click to select multiple rows
+- Seelct row(s) then press `M` to move them
 
 ## Changed in recent updates:
+- Ctrl-right-click to select multiple rows
 - Create new additional style file moved to the dropdown
 - Merge into master now automatic when you uncheck the `Edit additional` box
 - Moved `Use additional` and `Autosort` checkboxes into `Advanced`
@@ -131,17 +134,16 @@ class StyleEditor:
     return gr.Text.update(visible=False)
   
   @classmethod
-  def handle_outstanding_api_calls(cls, data:pd.DataFrame):
+  def handle_outstanding_api_calls(cls):
     with cls.api_lock:
-      for call in cls.api_calls_outstanding:
-        if call[0]=="delete":
-          rows_to_drop = [i for (i, row) in data.iterrows() if row[1]==call[1]]
-          for style in [row[1] for (_, row) in data.iterrows() if row[1]==call[1]]:
-            FileManager.remove_from_additional(style)
-          data = data.drop(index=rows_to_drop)
+      for command, value in cls.api_calls_outstanding:
+        match command:
+          case "delete":
+            FileManager.remove_style(maybe_prefixed_style=value)
+          case "move":
+            FileManager.move_to_additional(maybe_prefixed_style=value[0], new_prefix=value[1])
       cls.api_calls_outstanding = []
-    FileManager.save_styles(data)
-    return data
+    return FileManager.load_styles()
 
   @classmethod
   def on_ui_tabs(cls):
@@ -209,7 +211,7 @@ class StyleEditor:
       cls.style_file_selection.change(fn=cls.handle_style_file_selection_change, inputs=[cls.style_file_selection, dummy_component], 
                                       outputs=[cls.dataeditor,cls.style_file_selection], _js="style_file_selection_change")
 
-      cls.do_api.click(fn=cls.handle_outstanding_api_calls,inputs=cls.dataeditor,outputs=cls.dataeditor)
+      cls.do_api.click(fn=cls.handle_outstanding_api_calls,outputs=cls.dataeditor)
 
     return [(style_editor, "Style Editor", "style_editor")]
 
@@ -218,11 +220,23 @@ class StyleEditor:
 
     @api.post("/style-editor/delete-style/")
     def delete_style(stylename:ParameterString):
-      cls.api_calls_outstanding.append(("delete",stylename.value))
+      with cls.api_lock:
+        cls.api_calls_outstanding.append(("delete",stylename.value))
+
+    @api.post("/style-editor/move-style/")
+    def move_style(style:ParameterString, new_prefix:ParameterString):
+      with cls.api_lock:
+        cls.api_calls_outstanding.append(("move",(style.value, new_prefix.value)))
 
     @api.post("/style-editor/check-api/")
     def check() -> ParameterBool:
       return ParameterBool(value=True)
+    
+    @api.exception_handler(RequestValidationError)
+    async def validation_exception_handler(request: Request, exc: RequestValidationError):
+      exc_str = f'{exc}'.replace('\n', ' ').replace('   ', ' ')
+      content = {'status_code': 422, 'message': exc_str, 'data': None}
+      return JSONResponse(content=content, status_code=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
     with block:
       for tabs in block.children:

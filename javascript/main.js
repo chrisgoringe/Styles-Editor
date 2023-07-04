@@ -11,6 +11,10 @@ function when_loaded() {
     globalThis.selectedRows = [];
     grid = document.getElementById('style_editor_grid');
     grid.addEventListener('keydown', function(event){
+        // if a key is pressed in a TD which has an INPUT child, or an INPUT, this is typing in a cell, allow it
+        if (event.target.tagName === 'TD' && event.target.querySelector("input")) { return; }
+        if (event.target.tagName === 'INPUT') { return; }
+        
         if (event.ctrlKey === true) {
             event.stopImmediatePropagation();
             span = event.target.querySelector("span");
@@ -26,11 +30,21 @@ function when_loaded() {
             }
         }
 
-        // if a key is pressed in a TD which has an INPUT child, or an INPUT, this is typing in a cell, allow it
-        if (event.target.tagName === 'TD' && event.target.querySelector("input")) { return; }
-        if (event.target.tagName === 'INPUT') { return; }
+        // if M is pressed, move the selected styles
+        if (event.key === "m" && globalThis.selectedRows.length > 0) {
+            new_prefix = prompt("Move to style file:", "");
+            if (new_prefix != null) { 
+                globalThis.selectedRows.forEach( function(row) { 
+                    api_post("/style-editor/move-style", 
+                            {"style":{"value":row_style_name(row)}, "new_prefix":{"value":new_prefix}}, 
+                            function(x){} );    
+                });
+                document.getElementById("style_editor_handle_api").click();
+                unselect_rows();
+            }
+        }
 
-        // if backspace or delete are pressed, and we're over the selected row, delete it
+        // if backspace or delete are pressed, delete selected rows
         if (event.key === "Backspace" || event.key === "Delete") { 
             globalThis.selectedRows.forEach( function(row) { 
                 api_post("/style-editor/delete-style", 

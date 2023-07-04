@@ -9,7 +9,7 @@ import datetime
 from pathlib import Path
 import pyAesCrypt
 from scripts.additionals import Additionals
-from scripts.shared import columns, user_columns, display_columns, d_types
+from scripts.shared import columns, user_columns, display_columns, d_types, name_column
 
 class FileManager:
   basedir = scripts.basedir()
@@ -121,8 +121,35 @@ class FileManager:
     cls.save_styles(pd.DataFrame(styles, columns=display_columns), use_default=True)
 
   @classmethod
-  def remove_from_additional(cls, prefixed_style):
-    prefix, style = Additionals.split_stylename(prefixed_style)
+  def current_prefix(cls):
+    return Additionals.display_name(cls.current_styles_file_path)
+
+  @classmethod
+  def move_to_additional(cls, maybe_prefixed_style, new_prefix):
+    old_prefix, style = Additionals.split_stylename(maybe_prefixed_style)
+    old_prefix = old_prefix or cls.current_prefix()
+    old_prefixed_style = Additionals.merge_name(old_prefix, style)
+    new_prefixed_style = Additionals.merge_name(new_prefix, style)
+    data = cls.load_styles(use_default=True)
+    data[name_column] = data[name_column].str.replace(old_prefixed_style, new_prefixed_style)
+    cls.save_styles(data, use_default=True)
+    cls.remove_from_additional(old_prefixed_style)
+    cls.update_additional_style_files()
+
+  @classmethod
+  def remove_style(cls, maybe_prefixed_style):
+    prefix, style = Additionals.split_stylename(maybe_prefixed_style)
+    prefix = prefix or cls.current_prefix()
+    prefixed_style = Additionals.merge_name(prefix, style)
+    data = cls.load_styles(use_default=True)
+    rows_to_drop = [i for (i, row) in data.iterrows() if row[1]==prefixed_style]
+    cls.save_styles(data.drop(index=rows_to_drop), use_default=True)
+    cls.remove_from_additional(prefixed_style)
+    cls.update_additional_style_files()
+
+  @classmethod
+  def remove_from_additional(cls, maybe_prefixed_style):
+    prefix, style = Additionals.split_stylename(maybe_prefixed_style)
     if prefix:
       data = cls.load_styles(Additionals.full_path(prefix))
       data = data.drop(index=[i for (i, row) in data.iterrows() if row[1]==style])
