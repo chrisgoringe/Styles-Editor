@@ -1,4 +1,8 @@
 # Recent changes
+
+## 4 July 2023
+- Move styles to new additional style file
+
 ## 3 July 2023
 - Moved delete style functionality into an API call
 - Ctrl-right-click to select multiple rows
