@@ -2,6 +2,7 @@
 import pandas as pd
 import numpy as np
 import os, json
+from typing import Dict
 from modules.shared import cmd_opts, opts, prompt_styles
 import modules.scripts as scripts
 import shutil
@@ -10,6 +11,48 @@ from pathlib import Path
 import pyAesCrypt
 from scripts.additionals import Additionals
 from scripts.shared import columns, user_columns, display_columns, d_types, name_column
+
+class StyleFile:
+  def __init__(self, prefix:str):
+    self.prefix = prefix
+    self.filename = Additionals.full_path(prefix)
+    self.data:pd.DataFrame = self._load()
+
+  def _load(self):
+    try:
+      data = pd.read_csv(self.filename, header=None, names=columns, 
+                              encoding="utf-8-sig", dtype=d_types,
+                              skiprows=[0], usecols=[0,1,2])
+    except:
+      data = pd.DataFrame(columns=columns)
+
+    indices = range(data.shape[0])
+    data.insert(loc=0, column="sort", value=[i+1 for i in indices])
+    data.fillna('', inplace=True)
+    data.insert(loc=4, column="notes", 
+                     value=[FileManager.lookup_notes(data['name'][i], self.prefix) for i in indices])
+    if len(data)>0:
+      for column in user_columns:
+        data[column] = data[column].str.replace('\n', '<br>',regex=False)
+    return data
+
+  def save(self):
+    self.fix_duplicates()
+    clone = self.data.copy()
+    if len(clone)>0:
+      for column in user_columns:
+        clone[column] = clone[column].str.replace('<br>', '\n',regex=False)
+    clone.to_csv(self.filename, encoding="utf-8-sig", columns=columns, index=False)
+
+  def fix_duplicates(self):
+    names = self.data['name']
+    used = set()
+    for index, value in names.items():
+      if value in used:
+        while value in used:
+          value = value + "x"
+        names.at[index] = value
+      used.add(value)
 
 class FileManager:
   basedir = scripts.basedir()
@@ -36,46 +79,31 @@ class FileManager:
 
   encrypt = False
   encrypt_key = ""
+  loaded_styles:Dict[str,StyleFile] = {}
   
   @classmethod
-  def load_styles(cls, filename=None, use_default=False) -> pd.DataFrame:
-    filename = filename or (cls.default_style_file_path if use_default else cls.current_styles_file_path)
-    try:
-      dataframe = pd.read_csv(filename, header=None, names=columns, encoding="utf-8-sig", dtype=d_types,
-                                  engine='python', skiprows=[0], usecols=[0,1,2])
-    except:
-      dataframe = pd.DataFrame(columns=columns)
-    display = Additionals.display_name(filename)
-    entries = range(dataframe.shape[0])
-    dataframe.insert(loc=0, column="sort", value=[i+1 for i in entries])
-    dataframe.fillna('', inplace=True)
-    dataframe.insert(loc=4, column="notes", value=[cls.lookup_notes(dataframe['name'][i], display) for i in entries])
-    if len(dataframe)>0:
-      for column in user_columns:
-        dataframe[column] = dataframe[column].str.replace('\n', '<br>',regex=False)
-    return dataframe
+  def get_current_styles(cls):
+    return cls.get_styles(cls._current_prefix())
   
   @classmethod
-  def fix_duplicates(cls, data:pd.DataFrame):
-    names = data['name']
-    used = set()
-    for index, value in names.items():
-      if value in used:
-        while value in used:
-          value = value + "x"
-        names.at[index] = value
-      used.add(value)
+  def get_styles(cls, prefix='') -> pd.DataFrame:
+    """
+    If prefix is '', this is the default style file.
+    """
+    if not prefix in cls.loaded_styles:
+      cls.loaded_styles[prefix] = StyleFile(prefix)
+    return cls.loaded_styles[prefix].data.copy()
   
   @classmethod
-  def save_styles(cls, data:pd.DataFrame, filename=None, use_default=False):
-    filename = filename or (cls.default_style_file_path if use_default else cls.current_styles_file_path)
-    clone = data.copy()
-    cls.fix_duplicates(clone)
-    if len(clone)>0:
-      for column in user_columns:
-        clone[column] = clone[column].str.replace('<br>', '\n',regex=False)
-    clone.to_csv(filename, encoding="utf-8-sig", columns=columns, index=False)
-    cls.update_notes_dictionary(data, Additionals.display_name(filename))
+  def update_current_styles(cls, data):
+    cls.update_styles(data, cls._current_prefix())
+    
+  @classmethod
+  def update_styles(cls, data:pd.DataFrame, prefix=''):
+    cls.loaded_styles[prefix].data = data
+    cls.loaded_styles[prefix].save()
+    
+    cls.update_notes_dictionary(data, prefix)
     cls.save_notes_dictionary()
     prompt_styles.reload()
   
@@ -95,55 +123,56 @@ class FileManager:
 
   @classmethod
   def update_additional_style_files(cls):
-    additional_file_contents = { prefix : FileManager.load_styles(Additionals.full_path(prefix)).to_numpy() for prefix in Additionals.additional_style_files(include_new=False, display_names=True) }
-    for _, row in cls.load_styles(use_default=True).iterrows():
+    additional_files_as_numpy = { prefix : FileManager.get_styles(prefix=prefix).to_numpy() for prefix in Additionals.additional_style_files(include_new=False, display_names=True) }
+    for _, row in cls.get_styles().iterrows():
       prefix, row[1] = Additionals.split_stylename(row[1])
       if prefix:
-        if prefix in additional_file_contents:
-          additional_file_contents[prefix] = cls.add_or_replace(additional_file_contents[prefix], row)
+        if prefix in additional_files_as_numpy:
+          additional_files_as_numpy[prefix] = cls.add_or_replace(additional_files_as_numpy[prefix], row)
         else:
-          additional_file_contents[prefix] = np.vstack([row])
-    for prefix in additional_file_contents:
-      cls.save_styles(pd.DataFrame(additional_file_contents[prefix], columns=display_columns), filename=Additionals.full_path(prefix))
+          additional_files_as_numpy[prefix] = np.vstack([row])
+    for prefix in additional_files_as_numpy:
+      cls.update_styles(pd.DataFrame(additional_files_as_numpy[prefix], columns=display_columns), prefix=prefix)
 
   @classmethod
   def merge_additional_style_files(cls):
-    styles = [row for row in cls.load_styles(cls.default_style_file_path).to_numpy() if not Additionals.has_prefix(row[1])]
-    for filepath in Additionals.additional_style_files(include_new=False, display_names=False):
-      rows = cls.load_styles(filepath).to_numpy()
-      if len(rows)>0:
-        prefix = Additionals.display_name(filepath)
-        for row in rows:
-          row[1] = Additionals.merge_name(prefix, row[1])
-          styles.append(row)
-      else:
-        os.remove(filepath)
-    cls.save_styles(pd.DataFrame(styles, columns=display_columns), use_default=True)
+    styles = cls.get_styles('')
+    styles = styles.drop(index=[i for (i, row) in styles.iterrows() if Additionals.has_prefix(row[1])])
+    for prefix in Additionals.prefixes():
+      styles_with_prefix = cls.get_styles(prefix=prefix).copy()
+      for _, row in styles_with_prefix.iterrows():
+        row[1] = Additionals.merge_name(prefix, row[1])
+        styles = styles.append(row)
+      if len(styles_with_prefix)==0:
+        os.remove(Additionals.full_path(prefix))
+    styles['sort'] = [i+1 for i in range(len(styles['sort']))]
+    styles = styles.reset_index(drop=True)
+    cls.update_styles(styles)
 
   @classmethod
-  def current_prefix(cls):
+  def _current_prefix(cls):
     return Additionals.display_name(cls.current_styles_file_path)
 
   @classmethod
   def move_to_additional(cls, maybe_prefixed_style, new_prefix):
     old_prefix, style = Additionals.split_stylename(maybe_prefixed_style)
-    old_prefix = old_prefix or cls.current_prefix()
+    old_prefix = old_prefix or cls._current_prefix()
     old_prefixed_style = Additionals.merge_name(old_prefix, style)
     new_prefixed_style = Additionals.merge_name(new_prefix, style)
-    data = cls.load_styles(use_default=True)
+    data = cls.get_styles()
     data[name_column] = data[name_column].str.replace(old_prefixed_style, new_prefixed_style)
-    cls.save_styles(data, use_default=True)
+    cls.update_styles(data)
     cls.remove_from_additional(old_prefixed_style)
     cls.update_additional_style_files()
 
   @classmethod
   def remove_style(cls, maybe_prefixed_style):
     prefix, style = Additionals.split_stylename(maybe_prefixed_style)
-    prefix = prefix or cls.current_prefix()
+    prefix = prefix or cls._current_prefix()
     prefixed_style = Additionals.merge_name(prefix, style)
-    data = cls.load_styles(use_default=True)
+    data = cls.get_styles()
     rows_to_drop = [i for (i, row) in data.iterrows() if row[1]==prefixed_style]
-    cls.save_styles(data.drop(index=rows_to_drop), use_default=True)
+    cls.update_styles(data.drop(index=rows_to_drop))
     cls.remove_from_additional(prefixed_style)
     cls.update_additional_style_files()
 
@@ -151,9 +180,9 @@ class FileManager:
   def remove_from_additional(cls, maybe_prefixed_style):
     prefix, style = Additionals.split_stylename(maybe_prefixed_style)
     if prefix:
-      data = cls.load_styles(Additionals.full_path(prefix))
+      data = cls.get_styles(prefix)
       data = data.drop(index=[i for (i, row) in data.iterrows() if row[1]==style])
-      cls.save_styles(data, Additionals.full_path(prefix))
+      cls.update_styles(data, prefix=prefix)
 
   @classmethod
   def do_backup(cls):

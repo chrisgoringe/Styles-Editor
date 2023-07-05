@@ -1,5 +1,9 @@
 # Recent changes
 
+## 5 July 2023
+- Changes under the covers to increase performance
+- Automatically merge additional styles when moving to another tab
+
 ## 4 July 2023
 - Move styles to new additional style file
 
