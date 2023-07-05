@@ -136,16 +136,16 @@ class FileManager:
 
   @classmethod
   def merge_additional_style_files(cls):
-    styles = [row for row in cls.get_styles(prefix=None).to_numpy() if not Additionals.has_prefix(row[1])]
-    for prefix in Additionals.additional_style_files(include_new=False, display_names=True):
-      rows = cls.get_styles(prefix=prefix).to_numpy()
-      if len(rows)>0:
-        for row in rows:
-          row[1] = Additionals.merge_name(prefix, row[1])
-          styles.append(row)
-      else:
+    styles = cls.get_styles('')
+    styles = styles.drop(index=[i for (i, row) in styles.iterrows() if Additionals.has_prefix(row[1])])
+    for prefix in Additionals.prefixes():
+      styles_with_prefix = cls.get_styles(prefix=prefix).copy()
+      for _, row in styles_with_prefix.iterrows():
+        row[1] = Additionals.merge_name(prefix, row[1])
+        styles.loc[-1] = row
+      if len(styles_with_prefix)==0:
         os.remove(Additionals.full_path(prefix))
-    cls.update_styles(pd.DataFrame(styles, columns=display_columns))
+    cls.update_styles(styles)
 
   @classmethod
   def _current_prefix(cls):
