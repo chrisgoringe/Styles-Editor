@@ -156,3 +156,4 @@ test.py
 lasthash.json
 backups/
 notes.json
+.vscode/settings.json

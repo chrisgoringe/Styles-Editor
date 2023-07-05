@@ -68,14 +68,14 @@ class StyleEditor:
   def handle_autosort_checkbox_change(cls, data:pd.DataFrame, autosort) -> pd.DataFrame:
     if autosort:
       data = cls._sort_dataset(data)
-      FileManager.save_styles(data)
+      FileManager.update_current_styles(data)
     return data
 
   @classmethod
   def handle_dataeditor_input(cls, data:pd.DataFrame, autosort) -> pd.DataFrame:
     cls.backup.set_pending()
     data = cls._sort_dataset(data) if autosort else data
-    FileManager.save_styles(data)
+    FileManager.update_current_styles(data)
     return data
   
   @classmethod
@@ -97,10 +97,10 @@ class StyleEditor:
       labels = Additionals.additional_style_files(display_names=True, include_new=True)
       selected = Additionals.display_name(FileManager.current_styles_file_path)
       selected = selected if selected in labels else labels[0] if len(labels)>0 else ''
-      return gr.Row.update(visible=activate), FileManager.load_styles(), gr.Dropdown.update(choices=labels, value=selected)
+      return gr.Row.update(visible=activate), FileManager.get_current_styles(), gr.Dropdown.update(choices=labels, value=selected)
     else:
       FileManager.merge_additional_style_files()
-      return gr.Row.update(visible=activate), FileManager.load_styles(), gr.Dropdown.update()
+      return gr.Row.update(visible=activate), FileManager.get_current_styles(), gr.Dropdown.update()
   
   @classmethod
   def handle_style_file_selection_change(cls, prefix, _):
@@ -109,7 +109,7 @@ class StyleEditor:
       FileManager.current_styles_file_path = Additionals.full_path(prefix)
     else:
       prefix = Additionals.display_name(FileManager.current_styles_file_path)
-    return FileManager.load_styles(), gr.Dropdown.update(choices=Additionals.additional_style_files(display_names=True, include_new=True), value=prefix)
+    return FileManager.get_current_styles(), gr.Dropdown.update(choices=Additionals.additional_style_files(display_names=True, include_new=True), value=prefix)
   
   @classmethod
   def handle_use_encryption_checkbox_changed(cls, encrypt):
@@ -125,9 +125,9 @@ class StyleEditor:
     error = FileManager.restore_from_backup(tempfile.name)
     if error is None:
       FileManager.update_additional_style_files()
-      return gr.Text.update(visible=True, value="Styles restored"), False, FileManager.load_styles(use_default=True)
+      return gr.Text.update(visible=True, value="Styles restored"), False, FileManager.get_styles()
     else:
-      return gr.Text.update(visible=True, value=error), False, FileManager.load_styles(use_default=True)
+      return gr.Text.update(visible=True, value=error), False, FileManager.get_styles()
     
   @classmethod
   def handle_restore_backup_file_clear(cls):
@@ -143,7 +143,7 @@ class StyleEditor:
           case "move":
             FileManager.move_to_additional(maybe_prefixed_style=value[0], new_prefix=value[1])
       cls.api_calls_outstanding = []
-    return FileManager.load_styles()
+    return FileManager.get_current_styles()
 
   @classmethod
   def on_ui_tabs(cls):
@@ -185,7 +185,7 @@ class StyleEditor:
                                                     value=Additionals.display_name(''), 
                                                     label="Additional Style File", scale=1, min_width=200)
       with gr.Row():
-        cls.dataeditor = gr.Dataframe(value=FileManager.load_styles(), col_count=(len(display_columns),'fixed'), 
+        cls.dataeditor = gr.Dataframe(value=FileManager.get_current_styles(), col_count=(len(display_columns),'fixed'), 
                                           wrap=True, max_rows=1000, show_label=False, interactive=True, elem_id="style_editor_grid")
       
       cls.search_and_replace_button.click(fn=cls.handle_search_and_replace_click, inputs=[cls.search_box, cls.replace_box, cls.dataeditor], outputs=cls.dataeditor)
@@ -244,7 +244,7 @@ class StyleEditor:
           for tab in tabs.children:
             if isinstance(tab, gr.layouts.Tab):
               if tab.id=="style_editor":
-                tab.select(fn=FileManager.load_styles, outputs=cls.dataeditor)
+                tab.select(fn=FileManager.get_current_styles, outputs=cls.dataeditor)
                 cls.tab = tab
               elif tab.id=="txt2img" or tab.id=="img2img":
                 tab.select(fn=None, inputs=tab, _js="press_refresh_button")
