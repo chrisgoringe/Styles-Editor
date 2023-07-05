@@ -92,7 +92,7 @@ class FileManager:
     """
     if not prefix in cls.loaded_styles:
       cls.loaded_styles[prefix] = StyleFile(prefix)
-    return cls.loaded_styles[prefix].data
+    return cls.loaded_styles[prefix].data.copy()
   
   @classmethod
   def update_current_styles(cls, data):
@@ -142,9 +142,11 @@ class FileManager:
       styles_with_prefix = cls.get_styles(prefix=prefix).copy()
       for _, row in styles_with_prefix.iterrows():
         row[1] = Additionals.merge_name(prefix, row[1])
-        styles.loc[-1] = row
+        styles = styles.append(row)
       if len(styles_with_prefix)==0:
         os.remove(Additionals.full_path(prefix))
+    styles['sort'] = [i+1 for i in range(len(styles['sort']))]
+    styles = styles.reset_index(drop=True)
     cls.update_styles(styles)
 
   @classmethod
