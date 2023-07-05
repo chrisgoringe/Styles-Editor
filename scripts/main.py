@@ -37,9 +37,10 @@ class ParameterBool(BaseModel):
 class StyleEditor:
   update_help = """# Recent changes:
 ## Changed in this update:
-- Seelct row(s) then press `M` to move them
+- Automatically merge styles when changing away from this tab
 
 ## Changed in recent updates:
+- Select row(s) then press `M` to move them
 - Ctrl-right-click to select multiple rows
 - Create new additional style file moved to the dropdown
 - Merge into master now automatic when you uncheck the `Edit additional` box
@@ -49,6 +50,17 @@ class StyleEditor:
   backup = Background(FileManager.do_backup, 600)
   api_calls_outstanding = []
   api_lock = threading.Lock()
+  this_tab_selected = False
+
+  @classmethod
+  def handle_this_tab_selected(cls):
+    cls.this_tab_selected = True
+
+  @classmethod
+  def handle_another_tab_selected(cls):
+    if cls.this_tab_selected:
+      FileManager.merge_additional_style_files()
+    cls.this_tab_selected = False
 
   @staticmethod
   def _to_numeric(series:pd.Series):
@@ -245,8 +257,10 @@ class StyleEditor:
             if isinstance(tab, gr.layouts.Tab):
               if tab.id=="style_editor":
                 tab.select(fn=FileManager.get_current_styles, outputs=cls.dataeditor)
-                cls.tab = tab
-              elif tab.id=="txt2img" or tab.id=="img2img":
+                tab.select(fn=cls.handle_this_tab_selected)
+              else:
+                tab.select(fn=cls.handle_another_tab_selected)
+              if tab.id=="txt2img" or tab.id=="img2img":
                 tab.select(fn=None, inputs=tab, _js="press_refresh_button")
 
 script_callbacks.on_ui_tabs(StyleEditor.on_ui_tabs)

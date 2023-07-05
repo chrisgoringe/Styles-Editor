@@ -12,7 +12,7 @@ Alternatively, add the prefix `title::` to a style in the master view: the addit
 Empty additional style files are removed when you uncheck the `Edit additional style files` box.
 
 ## Saving
-The additional style files are autosaved as you edit. They are merged into the master style file when you uncheck the `Edit additional style files` box.
+The additional style files are autosaved as you edit. They are merged into the master style file when you uncheck the `Edit additional style files` box, or when you move to a different tab.
 
 ## Moving styles to or between an additional style file
 Select style or styles (with right click) then press `M` and enter the new prefix.
