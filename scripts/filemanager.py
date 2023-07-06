@@ -80,7 +80,14 @@ class FileManager:
   encrypt = False
   encrypt_key = ""
   loaded_styles:Dict[str,StyleFile] = {}
-  
+
+  @classmethod
+  def clear_style_cache(cls):
+    """
+    Drop all loaded styles
+    """
+    cls.loaded_styles = {}
+
   @classmethod
   def get_current_styles(cls):
     return cls.get_styles(cls._current_prefix())
@@ -89,17 +96,18 @@ class FileManager:
   def get_styles(cls, prefix='') -> pd.DataFrame:
     """
     If prefix is '', this is the default style file.
+    Load or retrieve from cache
     """
     if not prefix in cls.loaded_styles:
       cls.loaded_styles[prefix] = StyleFile(prefix)
     return cls.loaded_styles[prefix].data.copy()
   
   @classmethod
-  def update_current_styles(cls, data):
-    cls.update_styles(data, cls._current_prefix())
+  def save_current_styles(cls, data):
+    cls.save_styles(data, cls._current_prefix())
     
   @classmethod
-  def update_styles(cls, data:pd.DataFrame, prefix=''):
+  def save_styles(cls, data:pd.DataFrame, prefix=''):
     cls.loaded_styles[prefix].data = data
     cls.loaded_styles[prefix].save()
     
@@ -132,7 +140,7 @@ class FileManager:
         else:
           additional_files_as_numpy[prefix] = np.vstack([row])
     for prefix in additional_files_as_numpy:
-      cls.update_styles(pd.DataFrame(additional_files_as_numpy[prefix], columns=display_columns), prefix=prefix)
+      cls.save_styles(pd.DataFrame(additional_files_as_numpy[prefix], columns=display_columns), prefix=prefix)
 
   @classmethod
   def merge_additional_style_files(cls):
@@ -147,7 +155,7 @@ class FileManager:
         os.remove(Additionals.full_path(prefix))
     styles['sort'] = [i+1 for i in range(len(styles['sort']))]
     styles = styles.reset_index(drop=True)
-    cls.update_styles(styles)
+    cls.save_styles(styles)
 
   @classmethod
   def _current_prefix(cls):
@@ -161,7 +169,7 @@ class FileManager:
     new_prefixed_style = Additionals.merge_name(new_prefix, style)
     data = cls.get_styles()
     data[name_column] = data[name_column].str.replace(old_prefixed_style, new_prefixed_style)
-    cls.update_styles(data)
+    cls.save_styles(data)
     cls.remove_from_additional(old_prefixed_style)
     cls.update_additional_style_files()
 
@@ -172,7 +180,7 @@ class FileManager:
     prefixed_style = Additionals.merge_name(prefix, style)
     data = cls.get_styles()
     rows_to_drop = [i for (i, row) in data.iterrows() if row[1]==prefixed_style]
-    cls.update_styles(data.drop(index=rows_to_drop))
+    cls.save_styles(data.drop(index=rows_to_drop))
     cls.remove_from_additional(prefixed_style)
     cls.update_additional_style_files()
 
@@ -182,7 +190,7 @@ class FileManager:
     if prefix:
       data = cls.get_styles(prefix)
       data = data.drop(index=[i for (i, row) in data.iterrows() if row[1]==style])
-      cls.update_styles(data, prefix=prefix)
+      cls.save_styles(data, prefix=prefix)
 
   @classmethod
   def do_backup(cls):

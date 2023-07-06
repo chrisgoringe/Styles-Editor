@@ -54,12 +54,15 @@ class StyleEditor:
 
   @classmethod
   def handle_this_tab_selected(cls):
+    FileManager.clear_style_cache()
     cls.this_tab_selected = True
+    return FileManager.get_current_styles()
 
   @classmethod
   def handle_another_tab_selected(cls):
     if cls.this_tab_selected:
       FileManager.merge_additional_style_files()
+      FileManager.clear_style_cache()
     cls.this_tab_selected = False
 
   @staticmethod
@@ -80,14 +83,14 @@ class StyleEditor:
   def handle_autosort_checkbox_change(cls, data:pd.DataFrame, autosort) -> pd.DataFrame:
     if autosort:
       data = cls._sort_dataset(data)
-      FileManager.update_current_styles(data)
+      FileManager.save_current_styles(data)
     return data
 
   @classmethod
   def handle_dataeditor_input(cls, data:pd.DataFrame, autosort) -> pd.DataFrame:
     cls.backup.set_pending()
     data = cls._sort_dataset(data) if autosort else data
-    FileManager.update_current_styles(data)
+    FileManager.save_current_styles(data)
     return data
   
   @classmethod
@@ -256,8 +259,7 @@ class StyleEditor:
           for tab in tabs.children:
             if isinstance(tab, gr.layouts.Tab):
               if tab.id=="style_editor":
-                tab.select(fn=FileManager.get_current_styles, outputs=cls.dataeditor)
-                tab.select(fn=cls.handle_this_tab_selected)
+                tab.select(fn=cls.handle_this_tab_selected, outputs=cls.dataeditor)
               else:
                 tab.select(fn=cls.handle_another_tab_selected)
               if tab.id=="txt2img" or tab.id=="img2img":
