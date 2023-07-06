@@ -150,7 +150,7 @@ class FileManager:
       styles_with_prefix = cls.get_styles(prefix=prefix).copy()
       for _, row in styles_with_prefix.iterrows():
         row[1] = Additionals.merge_name(prefix, row[1])
-        styles = styles.append(row)
+      styles = pd.concat([styles, styles_with_prefix])
       if len(styles_with_prefix)==0:
         os.remove(Additionals.full_path(prefix))
     styles['sort'] = [i+1 for i in range(len(styles['sort']))]
