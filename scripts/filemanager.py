@@ -148,13 +148,12 @@ class FileManager:
     styles = styles.drop(index=[i for (i, row) in styles.iterrows() if Additionals.has_prefix(row[1])])
     for prefix in Additionals.prefixes():
       styles_with_prefix = cls.get_styles(prefix=prefix).copy()
-      for _, row in styles_with_prefix.iterrows():
-        row[1] = Additionals.merge_name(prefix, row[1])
-      styles = pd.concat([styles, styles_with_prefix])
       if len(styles_with_prefix)==0:
         os.remove(Additionals.full_path(prefix))
+      else:
+        styles_with_prefix[name_column] = [Additionals.merge_name(prefix,x) for x in styles_with_prefix[name_column]]
+        styles = pd.concat([styles, styles_with_prefix], ignore_index=True)
     styles['sort'] = [i+1 for i in range(len(styles['sort']))]
-    styles = styles.reset_index(drop=True)
     cls.save_styles(styles)
 
   @classmethod
