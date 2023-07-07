@@ -108,6 +108,8 @@ class FileManager:
     
   @classmethod
   def save_styles(cls, data:pd.DataFrame, prefix=''):
+    if not prefix in cls.loaded_styles:
+      cls.loaded_styles[prefix] = StyleFile(prefix)
     cls.loaded_styles[prefix].data = data
     cls.loaded_styles[prefix].save()
     
