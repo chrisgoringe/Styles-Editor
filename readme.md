@@ -57,7 +57,7 @@ Encryption is done using [pyAesCrypt](https://pypi.org/project/pyAesCrypt/).
 ### Backups
 The master style file is backed up every ten minutes (if changes have been made), with the most recent 24 backups retained. Backups are stored in `extensions/Styles-Editor/backups`.
 
-To restore a backup, drag and drop the backup style file into the `restore from backup` box. If it is encrypted (`.aes`) then the encryption key in the `Encryption` section is used to decrypt.
+To restore a backup, drag and drop the backup style file into the `restore from backup` box, or select one of the backups listed (the names are date_time in format `YYMMDD_HHMM`). If it is encrypted (`.aes`) then the encryption key in the `Encryption` section is used to decrypt.
 
 ### Stargazers
 Thanks to those who've starred this - knowing people value the extension makes it worth working on.

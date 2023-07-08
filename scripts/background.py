@@ -22,7 +22,7 @@ class Background:
     with self.lock:
       if not self._started:
         threading.Thread(group=None, target=self._action, daemon=True).start()
-        self.started = True
+        self._started = True
 
   def set_pending(self, pending=True):
     """

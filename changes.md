@@ -1,5 +1,9 @@
 # Recent changes
 
+## 8 July 2023
+- Fixed some bugs
+- List existing backups to restore from
+
 ## 5 July 2023
 - Changes under the covers to increase performance
 - Automatically merge additional styles when moving to another tab
