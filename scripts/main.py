@@ -37,9 +37,10 @@ class ParameterBool(BaseModel):
 class StyleEditor:
   update_help = """# Recent changes:
 ## Changed in this update:
-- Automatically merge styles when changing away from this tab
+- Show backups in the `restore from backup` section
 
 ## Changed in recent updates:
+- Automatically merge styles when changing away from this tab
 - Select row(s) then press `M` to move them
 - Ctrl-right-click to select multiple rows
 - Create new additional style file moved to the dropdown
@@ -55,6 +56,7 @@ class StyleEditor:
   @classmethod
   def handle_this_tab_selected(cls):
     FileManager.clear_style_cache()
+    FileManager.update_additional_style_files()
     cls.this_tab_selected = True
     return FileManager.get_current_styles()
 
@@ -137,7 +139,14 @@ class StyleEditor:
 
   @classmethod
   def handle_restore_backup_file_upload(cls, tempfile):
-    error = FileManager.restore_from_backup(tempfile.name)
+    return cls._after_backup_restore( FileManager.restore_from_upload(tempfile) )
+  
+  @classmethod
+  def handle_backup_restore_button_click(cls, selection):
+    return cls._after_backup_restore( FileManager.restore_from_backup(selection) )
+  
+  @classmethod
+  def _after_backup_restore(cls, error):
     if error is None:
       FileManager.update_additional_style_files()
       return gr.Text.update(visible=True, value="Styles restored"), False, FileManager.get_styles()
@@ -147,6 +156,10 @@ class StyleEditor:
   @classmethod
   def handle_restore_backup_file_clear(cls):
     return gr.Text.update(visible=False)
+  
+  @classmethod
+  def handle_backup_selection_change(cls, selection):
+    return gr.Dropdown.update(choices=FileManager.list_backups()+["---","Refresh list"], value=selection if selection!="Refresh list" else "---")
   
   @classmethod
   def handle_outstanding_api_calls(cls):
@@ -180,6 +193,10 @@ class StyleEditor:
         with gr.Column(scale=1, min_width=400):
           with gr.Accordion(label="Restore from Backup", open=False):
             gr.Markdown(value="If restoring from an encrypted backup, enter the encrption key under `Encryption` first.")
+            gr.Markdown(value="Either select from the dropdown and press `Restore`, or upload a `.csv` or `.aes` file below.")
+            with gr.Row():
+              cls.backup_selection = gr.Dropdown(choices=FileManager.list_backups()+["---","Refresh list"],value="---", label="Backups")
+              cls.backup_restore_button = gr.Button(value="Restore from backup")
             cls.restore_backup_file_upload = gr.File(file_types=[".csv", ".aes"], label="Restore from backup")
             cls.restore_result = gr.Text(visible=False, label="Result:")
         with gr.Column(scale=1, min_width=400):
@@ -193,7 +210,7 @@ class StyleEditor:
             cls.search_and_replace_button = gr.Button(value="Search and Replace")
         with gr.Column(scale=1, min_width=400):
           with gr.Accordion(label="Advanced options", open=False):
-            cls.use_additional_styles_checkbox = gr.Checkbox(value=False, label="Edit additional style files")
+            cls.use_additional_styles_checkbox = gr.Checkbox(value=FileManager.using_additional(), label="Edit additional style files")
             cls.autosort_checkbox = gr.Checkbox(value=False, label="Autosort")
             with gr.Group(visible=False) as cls.additional_file_display:
               cls.style_file_selection = gr.Dropdown(choices=Additionals.additional_style_files(display_names=True, include_new=True), 
@@ -212,7 +229,8 @@ class StyleEditor:
       cls.encryption_key_textbox.change(fn=cls.handle_encryption_key_change, inputs=[cls.encryption_key_textbox], outputs=[])
       cls.restore_backup_file_upload.upload(fn=cls.handle_restore_backup_file_upload, inputs=[cls.restore_backup_file_upload], outputs=[cls.restore_result, cls.use_additional_styles_checkbox, cls.dataeditor])
       cls.restore_backup_file_upload.clear(fn=cls.handle_restore_backup_file_clear, inputs=[], outputs=[cls.restore_result])
-
+      cls.backup_selection.change(fn=cls.handle_backup_selection_change, inputs=[cls.backup_selection], outputs=[cls.backup_selection])
+      cls.backup_restore_button.click(fn=cls.handle_backup_restore_button_click, inputs=[cls.backup_selection], outputs=[cls.restore_result, cls.use_additional_styles_checkbox, cls.dataeditor])
       cls.dataeditor.change(fn=None, inputs=[cls.filter_textbox, cls.filter_select], _js="filter_style_list")
 
       cls.dataeditor.input(fn=cls.handle_dataeditor_input, inputs=[cls.dataeditor, cls.autosort_checkbox], outputs=cls.dataeditor)

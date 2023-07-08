@@ -93,6 +93,10 @@ class FileManager:
     return cls.get_styles(cls._current_prefix())
   
   @classmethod
+  def using_additional(cls):
+    return cls._current_prefix()!=''
+  
+  @classmethod
   def get_styles(cls, prefix='') -> pd.DataFrame:
     """
     If prefix is '', this is the default style file.
@@ -207,7 +211,35 @@ class FileManager:
       os.remove(fileroot+".csv")
 
   @classmethod
-  def restore_from_backup(cls, tempfile):
+  def list_backups(cls):
+    return [file for file in os.listdir(cls.backup_directory) if (file.endswith('csv') or file.endswith('aes'))]
+
+  @classmethod
+  def restore_from_backup(cls, file):
+    path = os.path.join(cls.backup_directory, file)
+    if not os.path.exists(path):
+      return "Invalid selection"
+    if os.path.splitext(file)[1]==".aes":
+      try:
+        temp = os.path.join(cls.backup_directory, "temp.aes")
+        temd = os.path.join(cls.backup_directory, "temp.csv")
+        shutil.copyfile(file,temp)
+        pyAesCrypt.decryptFile(temp, temd, cls.encrypt_key)
+        os.rename(temd, cls.default_style_file_path)
+      except:
+        error = "Failed to decrypt .aes file"
+      finally:
+        if os.path.exists(temp):
+          os.remove(temp)
+        if os.path.exists(temd):
+          os.remove(temd)
+    else:
+      shutil.copyfile(path, cls.default_style_file_path)
+    return None
+
+  
+  @classmethod
+  def restore_from_upload(cls, tempfile):
     error = None
     if os.path.exists(cls.default_style_file_path):
       if os.path.exists(cls.default_style_file_path+".temp"):
