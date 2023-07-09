@@ -1,5 +1,8 @@
 # Recent changes
 
+## 9 July 2023
+- Allow backups to be downloaded
+
 ## 8 July 2023
 - Fixed some bugs
 - List existing backups to restore from

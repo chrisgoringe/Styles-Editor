@@ -37,9 +37,10 @@ class ParameterBool(BaseModel):
 class StyleEditor:
   update_help = """# Recent changes:
 ## Changed in this update:
-- Show backups in the `restore from backup` section
+- Allow backups to be downloaded
 
 ## Changed in recent updates:
+- Show backups in the `restore from backup` section
 - Automatically merge styles when changing away from this tab
 - Select row(s) then press `M` to move them
 - Ctrl-right-click to select multiple rows
@@ -159,7 +160,10 @@ class StyleEditor:
   
   @classmethod
   def handle_backup_selection_change(cls, selection):
-    return gr.Dropdown.update(choices=FileManager.list_backups()+["---","Refresh list"], value=selection if selection!="Refresh list" else "---")
+    if selection=="Refresh list" or selection=="---":
+      return gr.Dropdown.update(choices=FileManager.list_backups()+["---","Refresh list"], value="---"), gr.File.update()
+    else:
+      return gr.Dropdown.update(choices=FileManager.list_backups()+["---","Refresh list"], value=selection), gr.File.update(value=FileManager.backup_file_path(selection))
   
   @classmethod
   def handle_outstanding_api_calls(cls):
@@ -191,13 +195,14 @@ class StyleEditor:
             gr.Markdown(value="If checked, and a key is provided, backups are encrypted. The active style file and additional style files are not.")
             gr.Markdown(value="Files are encrypted using pyAesCrypt (https://pypi.org/project/pyAesCrypt/)")
         with gr.Column(scale=1, min_width=400):
-          with gr.Accordion(label="Restore from Backup", open=False):
+          with gr.Accordion(label="Restore/Download backups", open=False):
             gr.Markdown(value="If restoring from an encrypted backup, enter the encrption key under `Encryption` first.")
-            gr.Markdown(value="Either select from the dropdown and press `Restore`, or upload a `.csv` or `.aes` file below.")
+            gr.Markdown(value="To restore: select a backup from the dropdown and press `Restore`, or upload a `.csv` or `.aes` file below.")
+            gr.Markdown(value="To download: select a backup from the dropdown then download it from the box below.")
             with gr.Row():
               cls.backup_selection = gr.Dropdown(choices=FileManager.list_backups()+["---","Refresh list"],value="---", label="Backups")
-              cls.backup_restore_button = gr.Button(value="Restore from backup")
-            cls.restore_backup_file_upload = gr.File(file_types=[".csv", ".aes"], label="Restore from backup")
+              cls.backup_restore_button = gr.Button(value="Restore")
+            cls.restore_backup_file_upload = gr.File(file_types=[".csv", ".aes"], label="Upload / Download")
             cls.restore_result = gr.Text(visible=False, label="Result:")
         with gr.Column(scale=1, min_width=400):
           with gr.Accordion(label="Filter view", open=False, elem_id="style_editor_filter_accordian"):
@@ -229,7 +234,7 @@ class StyleEditor:
       cls.encryption_key_textbox.change(fn=cls.handle_encryption_key_change, inputs=[cls.encryption_key_textbox], outputs=[])
       cls.restore_backup_file_upload.upload(fn=cls.handle_restore_backup_file_upload, inputs=[cls.restore_backup_file_upload], outputs=[cls.restore_result, cls.use_additional_styles_checkbox, cls.dataeditor])
       cls.restore_backup_file_upload.clear(fn=cls.handle_restore_backup_file_clear, inputs=[], outputs=[cls.restore_result])
-      cls.backup_selection.change(fn=cls.handle_backup_selection_change, inputs=[cls.backup_selection], outputs=[cls.backup_selection])
+      cls.backup_selection.change(fn=cls.handle_backup_selection_change, inputs=[cls.backup_selection], outputs=[cls.backup_selection, cls.restore_backup_file_upload])
       cls.backup_restore_button.click(fn=cls.handle_backup_restore_button_click, inputs=[cls.backup_selection], outputs=[cls.restore_result, cls.use_additional_styles_checkbox, cls.dataeditor])
       cls.dataeditor.change(fn=None, inputs=[cls.filter_textbox, cls.filter_select], _js="filter_style_list")
 

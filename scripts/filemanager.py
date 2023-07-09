@@ -215,8 +215,12 @@ class FileManager:
     return [file for file in os.listdir(cls.backup_directory) if (file.endswith('csv') or file.endswith('aes'))]
 
   @classmethod
+  def backup_file_path(cls, file):
+    return os.path.join(cls.backup_directory, file)
+  
+  @classmethod
   def restore_from_backup(cls, file):
-    path = os.path.join(cls.backup_directory, file)
+    path = cls.backup_file_path(file)
     if not os.path.exists(path):
       return "Invalid selection"
     if os.path.splitext(file)[1]==".aes":

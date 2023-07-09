@@ -157,3 +157,4 @@ lasthash.json
 backups/
 notes.json
 .vscode/settings.json
+.DS_Store
