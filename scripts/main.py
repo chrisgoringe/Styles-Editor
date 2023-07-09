@@ -149,6 +149,7 @@ class StyleEditor:
   @classmethod
   def _after_backup_restore(cls, error):
     if error is None:
+      FileManager.clear_style_cache()
       FileManager.update_additional_style_files()
       return gr.Text.update(visible=True, value="Styles restored"), False, FileManager.get_styles()
     else:
