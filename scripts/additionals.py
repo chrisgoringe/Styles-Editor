@@ -33,6 +33,19 @@ class Additionals:
     else:
       return name
     
+  @staticmethod
+  def prefixed_style(maybe_prefixed_style: str, current_prefix:str, force=False):
+    """
+    If force is False:
+      If it has a prefix, return it. 
+      If not, use the one specified. If that is None or '', no prefix
+    If force is True:
+      use the prefix specified
+    """
+    prefix, style = Additionals.split_stylename(maybe_prefixed_style)
+    prefix = current_prefix if force else (prefix or current_prefix) 
+    return Additionals.merge_name(prefix, style)
+    
   @classmethod
   def full_path(cls, filename:str) -> str:
     """

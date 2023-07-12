@@ -15,7 +15,7 @@ function when_loaded() {
         if (event.target.tagName === 'TD' && event.target.querySelector("input")) { return; }
         if (event.target.tagName === 'INPUT') { return; }
         
-        if (event.ctrlKey === true) {
+        if (event.ctrlKey === true || event.metaKey === true) {
             event.stopImmediatePropagation();
             span = event.target.querySelector("span");
             if (event.key === 'c') {
@@ -44,14 +44,29 @@ function when_loaded() {
             }
         }
 
-        // if backspace or delete are pressed, delete selected rows
-        if (event.key === "Backspace" || event.key === "Delete") { 
+        // if D is pressed, duplicate the selected styles
+        if (event.key === "d" && globalThis.selectedRows.length > 0) {
             globalThis.selectedRows.forEach( function(row) { 
-                api_post("/style-editor/delete-style", 
-                        {"value":row_style_name(row)}, 
+                api_post("/style-editor/duplicate-style", 
+                        {"value":row_style_name(row)},
                         function(x){} );    
             });
             document.getElementById("style_editor_handle_api").click();
+            unselect_rows();
+        }
+
+        // if backspace or delete are pressed, delete selected rows
+        if (event.key === "Backspace" || event.key === "Delete") { 
+            if (globalThis.selectedRows.length > 0) {
+                globalThis.selectedRows.forEach( function(row) { 
+                    api_post("/style-editor/delete-style", 
+                            {"value":row_style_name(row)}, 
+                            function(x){} );    
+                });
+                document.getElementById("style_editor_handle_api").click();
+            } else {
+                update(event.target,"");
+            }
             globalThis.selectedRows = [];
         } 
 
@@ -61,13 +76,17 @@ function when_loaded() {
 
     grid.addEventListener('contextmenu', function(event){
         if(event.shiftKey) { return; }
-        if(!event.ctrlKey) { unselect_rows(); }
         row = event.target.closest("tr");
         if (row) { select_row(row); event.stopImmediatePropagation(); event.preventDefault(); }  
     }, { capture: true });
 
     grid.addEventListener('click', function(event){
-        unselect_rows()
+        if (event.ctrlKey || event.metaKey) {
+            row = event.target.closest("tr");
+            if (row) { select_row(row); event.stopImmediatePropagation(); event.preventDefault(); }      
+        } else {
+            unselect_rows();
+        }
     }, { capture: true });
 }
 

@@ -35,7 +35,20 @@ class StyleFile:
       for column in user_columns:
         data[column] = data[column].str.replace('\n', '<br>',regex=False)
     return data
-
+  
+  @staticmethod
+  def sort_dataset(data:pd.DataFrame) -> pd.DataFrame:
+    def _to_numeric(series:pd.Series):
+      nums = pd.to_numeric(series)
+      if any(nums.isna()):
+        raise Exception("don't update display")
+      return nums
+    
+    try:
+      return data.sort_values(by='sort', axis='index', inplace=False, na_position='first', key=_to_numeric)
+    except:
+      return data
+  
   def save(self):
     self.fix_duplicates()
     clone = self.data.copy()
@@ -168,10 +181,8 @@ class FileManager:
 
   @classmethod
   def move_to_additional(cls, maybe_prefixed_style, new_prefix):
-    old_prefix, style = Additionals.split_stylename(maybe_prefixed_style)
-    old_prefix = old_prefix or cls._current_prefix()
-    old_prefixed_style = Additionals.merge_name(old_prefix, style)
-    new_prefixed_style = Additionals.merge_name(new_prefix, style)
+    old_prefixed_style = Additionals.prefixed_style(maybe_prefixed_style, cls._current_prefix())
+    new_prefixed_style = Additionals.prefixed_style(maybe_prefixed_style, new_prefix, force=True)
     data = cls.get_styles()
     data[name_column] = data[name_column].str.replace(old_prefixed_style, new_prefixed_style)
     cls.save_styles(data)
@@ -180,13 +191,21 @@ class FileManager:
 
   @classmethod
   def remove_style(cls, maybe_prefixed_style):
-    prefix, style = Additionals.split_stylename(maybe_prefixed_style)
-    prefix = prefix or cls._current_prefix()
-    prefixed_style = Additionals.merge_name(prefix, style)
+    prefixed_style = Additionals.prefixed_style(maybe_prefixed_style, cls._current_prefix())
     data = cls.get_styles()
     rows_to_drop = [i for (i, row) in data.iterrows() if row[1]==prefixed_style]
     cls.save_styles(data.drop(index=rows_to_drop))
     cls.remove_from_additional(prefixed_style)
+    cls.update_additional_style_files()
+
+  @classmethod
+  def duplicate_style(cls, maybe_prefixed_style):
+    prefixed_style = Additionals.prefixed_style(maybe_prefixed_style, cls._current_prefix())
+    data = cls.get_styles()
+    new_rows = pd.DataFrame([row for (i, row) in data.iterrows() if row[1]==prefixed_style])
+    data = pd.concat([data, new_rows], ignore_index=True)
+    data = StyleFile.sort_dataset(data)
+    cls.save_styles(data)
     cls.update_additional_style_files()
 
   @classmethod

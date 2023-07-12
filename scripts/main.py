@@ -10,7 +10,7 @@ from modules import script_callbacks
 import pandas as pd
 import threading
 
-from scripts.filemanager import FileManager
+from scripts.filemanager import FileManager, StyleFile
 from scripts.additionals import Additionals
 from scripts.background import Background
 from scripts.shared import display_columns
@@ -37,18 +37,23 @@ class ParameterBool(BaseModel):
 class StyleEditor:
   update_help = """# Recent changes:
 ## Changed in this update:
-- Allow backups to be downloaded
+- Make mac command key work for cut, copy, paste
+- Fix delete of cell when no row selected
+- Cmd / Ctrl / Right -click all select multiple rows
+- `D` to duplicate selected row
 
 ## Changed in recent updates:
+- Allow backups to be downloaded
 - Show backups in the `restore from backup` section
 - Automatically merge styles when changing away from this tab
 - Select row(s) then press `M` to move them
 - Ctrl-right-click to select multiple rows
-- Create new additional style file moved to the dropdown
-- Merge into master now automatic when you uncheck the `Edit additional` box
-- Moved `Use additional` and `Autosort` checkboxes into `Advanced`
 
 """
+  brief_guide = """Click to select cell. Dbl-click to edit cell. Cmd-, Ctrl-, ⌘- or right-click to select rows.
+
+`Backspace/Delete` to clear selected cell/delete row(s). Ctrl- or ⌘- `X` `C` `V` cut copy or paste selected cell (not row).
+`M` to move selected row(s). `D` to duplicate selected row(s)"""
   backup = Background(FileManager.do_backup, 600)
   api_calls_outstanding = []
   api_lock = threading.Lock()
@@ -67,32 +72,18 @@ class StyleEditor:
       FileManager.merge_additional_style_files()
       FileManager.clear_style_cache()
     cls.this_tab_selected = False
-
-  @staticmethod
-  def _to_numeric(series:pd.Series):
-    nums = pd.to_numeric(series)
-    if any(nums.isna()):
-      raise Exception("don't update display")
-    return nums
-  
-  @classmethod
-  def _sort_dataset(cls, data:pd.DataFrame) -> pd.DataFrame:
-      try:
-        return data.sort_values(by='sort', axis='index', inplace=False, na_position='first', key=cls._to_numeric)
-      except:
-        return data
-      
+ 
   @classmethod
   def handle_autosort_checkbox_change(cls, data:pd.DataFrame, autosort) -> pd.DataFrame:
     if autosort:
-      data = cls._sort_dataset(data)
+      data = StyleFile.sort_dataset(data)
       FileManager.save_current_styles(data)
     return data
 
   @classmethod
   def handle_dataeditor_input(cls, data:pd.DataFrame, autosort) -> pd.DataFrame:
     cls.backup.set_pending()
-    data = cls._sort_dataset(data) if autosort else data
+    data = StyleFile.sort_dataset(data) if autosort else data
     FileManager.save_current_styles(data)
     return data
   
@@ -175,6 +166,8 @@ class StyleEditor:
             FileManager.remove_style(maybe_prefixed_style=value)
           case "move":
             FileManager.move_to_additional(maybe_prefixed_style=value[0], new_prefix=value[1])
+          case "duplicate":
+            FileManager.duplicate_style(maybe_prefixed_style=value)
       cls.api_calls_outstanding = []
     return FileManager.get_current_styles()
 
@@ -223,6 +216,8 @@ class StyleEditor:
                                                     value=Additionals.display_name(''), 
                                                     label="Additional Style File", scale=1, min_width=200)
       with gr.Row():
+        gr.Markdown(cls.brief_guide)
+      with gr.Row():
         cls.dataeditor = gr.Dataframe(value=FileManager.get_current_styles(), col_count=(len(display_columns),'fixed'), 
                                           wrap=True, max_rows=1000, show_label=False, interactive=True, elem_id="style_editor_grid")
       
@@ -261,6 +256,11 @@ class StyleEditor:
     def delete_style(stylename:ParameterString):
       with cls.api_lock:
         cls.api_calls_outstanding.append(("delete",stylename.value))
+
+    @api.post("/style-editor/duplicate-style/")
+    def duplicate_style(stylename:ParameterString):
+      with cls.api_lock:
+        cls.api_calls_outstanding.append(("duplicate",stylename.value))
 
     @api.post("/style-editor/move-style/")
     def move_style(style:ParameterString, new_prefix:ParameterString):

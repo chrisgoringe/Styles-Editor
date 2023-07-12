@@ -35,7 +35,8 @@ Click on a cell to select it, then use Ctrl-X, C and V.
 Right-click on a style to select that row. Then hit `backspace` or `delete`. You can select multiple rows by ctrl-clicking.
 
 ### Add styles
-Use the `New row` button, and then edit the boxes as you need. Note that if you have a filter applied the new row probably won't appear because it is empty, so best not to do that.
+Use the `New row` button, and then edit the boxes as you need. Or select a row and press `D` to duplicate it.
+Note that if you have a filter applied the new row probably won't appear because it is empty, so best not to do that.
 
 ### Duplicate style names
 The editor will not allow styles to have the same name, so one or more 'x's will be appended to any duplicates.
