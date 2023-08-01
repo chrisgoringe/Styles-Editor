@@ -8,7 +8,10 @@ import modules.scripts as scripts
 import shutil
 import datetime
 from pathlib import Path
-import pyAesCrypt
+try:
+  import pyAesCrypt
+except:
+  print("No pyAesCrypt - won't be able to do encryption")
 from scripts.additionals import Additionals
 from scripts.shared import columns, user_columns, display_columns, d_types, name_column
 
@@ -207,8 +210,11 @@ class FileManager:
     for path in paths[24:]:
       os.remove(str(path))
     if cls.encrypt and len(cls.encrypt_key)>0:
-      pyAesCrypt.encryptFile(fileroot+".csv", fileroot+".csv.aes", cls.encrypt_key)
-      os.remove(fileroot+".csv")
+      try:
+        pyAesCrypt.encryptFile(fileroot+".csv", fileroot+".csv.aes", cls.encrypt_key)
+        os.remove(fileroot+".csv")
+      except:
+        print("Failed to encrypt")
 
   @classmethod
   def list_backups(cls):
