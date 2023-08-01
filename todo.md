@@ -6,7 +6,6 @@ Feel free to open an issue if there's something else you'd like!
 ## Walk (really ought to do these)
 
 ## Run (these might be nice)
-- duplicate style (duplicate a row in the table)
 - add style from txt2img or img2img prompts [https://github.com/chrisgoringe/Styles-Editor/issues/77]
 - copy selected styles between tabs not just prompt (not really this extension, but a pain)
 

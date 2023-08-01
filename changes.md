@@ -1,5 +1,13 @@
 # Recent changes
 
+## 12 July 2023
+- Make mac command key work for cut, copy, paste
+- Fix delete of cell when no row selected
+- `D` to duplicate selected row(s)
+
+## 9 July 2023
+- Allow backups to be downloaded
+
 ## 8 July 2023
 - Fixed some bugs
 - List existing backups to restore from

@@ -10,7 +10,7 @@ from modules import script_callbacks
 import pandas as pd
 import threading
 
-from scripts.filemanager import FileManager
+from scripts.filemanager import FileManager, StyleFile
 from scripts.additionals import Additionals
 from scripts.background import Background
 from scripts.shared import display_columns
@@ -37,17 +37,23 @@ class ParameterBool(BaseModel):
 class StyleEditor:
   update_help = """# Recent changes:
 ## Changed in this update:
-- Show backups in the `restore from backup` section
+- Make mac command key work for cut, copy, paste
+- Fix delete of cell when no row selected
+- Cmd / Ctrl / Right -click all select multiple rows
+- `D` to duplicate selected row
 
 ## Changed in recent updates:
+- Allow backups to be downloaded
+- Show backups in the `restore from backup` section
 - Automatically merge styles when changing away from this tab
 - Select row(s) then press `M` to move them
 - Ctrl-right-click to select multiple rows
-- Create new additional style file moved to the dropdown
-- Merge into master now automatic when you uncheck the `Edit additional` box
-- Moved `Use additional` and `Autosort` checkboxes into `Advanced`
 
 """
+  brief_guide = """Click to select cell. Dbl-click to edit cell. Cmd-, Ctrl-, ⌘- or right-click to select rows.
+
+`Backspace/Delete` to clear selected cell/delete row(s). Ctrl- or ⌘- `X` `C` `V` cut copy or paste selected cell (not row).
+`M` to move selected row(s). `D` to duplicate selected row(s)"""
   backup = Background(FileManager.do_backup, 600)
   api_calls_outstanding = []
   api_lock = threading.Lock()
@@ -66,32 +72,18 @@ class StyleEditor:
       FileManager.merge_additional_style_files()
       FileManager.clear_style_cache()
     cls.this_tab_selected = False
-
-  @staticmethod
-  def _to_numeric(series:pd.Series):
-    nums = pd.to_numeric(series)
-    if any(nums.isna()):
-      raise Exception("don't update display")
-    return nums
-  
-  @classmethod
-  def _sort_dataset(cls, data:pd.DataFrame) -> pd.DataFrame:
-      try:
-        return data.sort_values(by='sort', axis='index', inplace=False, na_position='first', key=cls._to_numeric)
-      except:
-        return data
-      
+ 
   @classmethod
   def handle_autosort_checkbox_change(cls, data:pd.DataFrame, autosort) -> pd.DataFrame:
     if autosort:
-      data = cls._sort_dataset(data)
+      data = StyleFile.sort_dataset(data)
       FileManager.save_current_styles(data)
     return data
 
   @classmethod
   def handle_dataeditor_input(cls, data:pd.DataFrame, autosort) -> pd.DataFrame:
     cls.backup.set_pending()
-    data = cls._sort_dataset(data) if autosort else data
+    data = StyleFile.sort_dataset(data) if autosort else data
     FileManager.save_current_styles(data)
     return data
   
@@ -148,6 +140,7 @@ class StyleEditor:
   @classmethod
   def _after_backup_restore(cls, error):
     if error is None:
+      FileManager.clear_style_cache()
       FileManager.update_additional_style_files()
       return gr.Text.update(visible=True, value="Styles restored"), False, FileManager.get_styles()
     else:
@@ -159,7 +152,10 @@ class StyleEditor:
   
   @classmethod
   def handle_backup_selection_change(cls, selection):
-    return gr.Dropdown.update(choices=FileManager.list_backups()+["---","Refresh list"], value=selection if selection!="Refresh list" else "---")
+    if selection=="Refresh list" or selection=="---":
+      return gr.Dropdown.update(choices=FileManager.list_backups()+["---","Refresh list"], value="---"), gr.File.update()
+    else:
+      return gr.Dropdown.update(choices=FileManager.list_backups()+["---","Refresh list"], value=selection), gr.File.update(value=FileManager.backup_file_path(selection))
   
   @classmethod
   def handle_outstanding_api_calls(cls):
@@ -170,6 +166,8 @@ class StyleEditor:
             FileManager.remove_style(maybe_prefixed_style=value)
           case "move":
             FileManager.move_to_additional(maybe_prefixed_style=value[0], new_prefix=value[1])
+          case "duplicate":
+            FileManager.duplicate_style(maybe_prefixed_style=value)
       cls.api_calls_outstanding = []
     return FileManager.get_current_styles()
 
@@ -191,13 +189,14 @@ class StyleEditor:
             gr.Markdown(value="If checked, and a key is provided, backups are encrypted. The active style file and additional style files are not.")
             gr.Markdown(value="Files are encrypted using pyAesCrypt (https://pypi.org/project/pyAesCrypt/)")
         with gr.Column(scale=1, min_width=400):
-          with gr.Accordion(label="Restore from Backup", open=False):
+          with gr.Accordion(label="Restore/Download backups", open=False):
             gr.Markdown(value="If restoring from an encrypted backup, enter the encrption key under `Encryption` first.")
-            gr.Markdown(value="Either select from the dropdown and press `Restore`, or upload a `.csv` or `.aes` file below.")
+            gr.Markdown(value="To restore: select a backup from the dropdown and press `Restore`, or upload a `.csv` or `.aes` file below.")
+            gr.Markdown(value="To download: select a backup from the dropdown then download it from the box below.")
             with gr.Row():
               cls.backup_selection = gr.Dropdown(choices=FileManager.list_backups()+["---","Refresh list"],value="---", label="Backups")
-              cls.backup_restore_button = gr.Button(value="Restore from backup")
-            cls.restore_backup_file_upload = gr.File(file_types=[".csv", ".aes"], label="Restore from backup")
+              cls.backup_restore_button = gr.Button(value="Restore")
+            cls.restore_backup_file_upload = gr.File(file_types=[".csv", ".aes"], label="Upload / Download")
             cls.restore_result = gr.Text(visible=False, label="Result:")
         with gr.Column(scale=1, min_width=400):
           with gr.Accordion(label="Filter view", open=False, elem_id="style_editor_filter_accordian"):
@@ -217,6 +216,8 @@ class StyleEditor:
                                                     value=Additionals.display_name(''), 
                                                     label="Additional Style File", scale=1, min_width=200)
       with gr.Row():
+        gr.Markdown(cls.brief_guide)
+      with gr.Row():
         cls.dataeditor = gr.Dataframe(value=FileManager.get_current_styles(), col_count=(len(display_columns),'fixed'), 
                                           wrap=True, max_rows=1000, show_label=False, interactive=True, elem_id="style_editor_grid")
       
@@ -229,7 +230,7 @@ class StyleEditor:
       cls.encryption_key_textbox.change(fn=cls.handle_encryption_key_change, inputs=[cls.encryption_key_textbox], outputs=[])
       cls.restore_backup_file_upload.upload(fn=cls.handle_restore_backup_file_upload, inputs=[cls.restore_backup_file_upload], outputs=[cls.restore_result, cls.use_additional_styles_checkbox, cls.dataeditor])
       cls.restore_backup_file_upload.clear(fn=cls.handle_restore_backup_file_clear, inputs=[], outputs=[cls.restore_result])
-      cls.backup_selection.change(fn=cls.handle_backup_selection_change, inputs=[cls.backup_selection], outputs=[cls.backup_selection])
+      cls.backup_selection.change(fn=cls.handle_backup_selection_change, inputs=[cls.backup_selection], outputs=[cls.backup_selection, cls.restore_backup_file_upload])
       cls.backup_restore_button.click(fn=cls.handle_backup_restore_button_click, inputs=[cls.backup_selection], outputs=[cls.restore_result, cls.use_additional_styles_checkbox, cls.dataeditor])
       cls.dataeditor.change(fn=None, inputs=[cls.filter_textbox, cls.filter_select], _js="filter_style_list")
 
@@ -255,6 +256,11 @@ class StyleEditor:
     def delete_style(stylename:ParameterString):
       with cls.api_lock:
         cls.api_calls_outstanding.append(("delete",stylename.value))
+
+    @api.post("/style-editor/duplicate-style/")
+    def duplicate_style(stylename:ParameterString):
+      with cls.api_lock:
+        cls.api_calls_outstanding.append(("duplicate",stylename.value))
 
     @api.post("/style-editor/move-style/")
     def move_style(style:ParameterString, new_prefix:ParameterString):
