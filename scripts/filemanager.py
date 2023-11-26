@@ -146,7 +146,7 @@ class FileManager:
   @staticmethod
   def add_or_replace(array:np.ndarray, row):
     for i in range(len(array)):
-      if array[i][1] == row[1]:
+      if array[i][1] == row.iloc[1]:
         array[i] = row
         return array
     return np.vstack([array,row])
@@ -155,7 +155,7 @@ class FileManager:
   def update_additional_style_files(cls):
     additional_files_as_numpy = { prefix : FileManager.get_styles(prefix=prefix).to_numpy() for prefix in Additionals.additional_style_files(include_new=False, display_names=True) }
     for _, row in cls.get_styles().iterrows():
-      prefix, row[1] = Additionals.split_stylename(row[1])
+      prefix, row.iloc[1] = Additionals.split_stylename(row.iloc[1])
       if prefix:
         if prefix in additional_files_as_numpy:
           additional_files_as_numpy[prefix] = cls.add_or_replace(additional_files_as_numpy[prefix], row)
@@ -167,7 +167,7 @@ class FileManager:
   @classmethod
   def merge_additional_style_files(cls):
     styles = cls.get_styles('')
-    styles = styles.drop(index=[i for (i, row) in styles.iterrows() if Additionals.has_prefix(row[1])])
+    styles = styles.drop(index=[i for (i, row) in styles.iterrows() if Additionals.has_prefix(row.iloc[1])])
     for prefix in Additionals.prefixes():
       styles_with_prefix = cls.get_styles(prefix=prefix).copy()
       if len(styles_with_prefix)==0:
@@ -196,7 +196,7 @@ class FileManager:
   def remove_style(cls, maybe_prefixed_style):
     prefixed_style = Additionals.prefixed_style(maybe_prefixed_style, cls._current_prefix())
     data = cls.get_styles()
-    rows_to_drop = [i for (i, row) in data.iterrows() if row[1]==prefixed_style]
+    rows_to_drop = [i for (i, row) in data.iterrows() if row.iloc[1]==prefixed_style]
     cls.save_styles(data.drop(index=rows_to_drop))
     cls.remove_from_additional(prefixed_style)
     cls.update_additional_style_files()
@@ -205,7 +205,7 @@ class FileManager:
   def duplicate_style(cls, maybe_prefixed_style):
     prefixed_style = Additionals.prefixed_style(maybe_prefixed_style, cls._current_prefix())
     data = cls.get_styles()
-    new_rows = pd.DataFrame([row for (i, row) in data.iterrows() if row[1]==prefixed_style])
+    new_rows = pd.DataFrame([row for (i, row) in data.iterrows() if row.iloc[1]==prefixed_style])
     data = pd.concat([data, new_rows], ignore_index=True)
     data = StyleFile.sort_dataset(data)
     cls.save_styles(data)
@@ -216,7 +216,7 @@ class FileManager:
     prefix, style = Additionals.split_stylename(maybe_prefixed_style)
     if prefix:
       data = cls.get_styles(prefix)
-      data = data.drop(index=[i for (i, row) in data.iterrows() if row[1]==style])
+      data = data.drop(index=[i for (i, row) in data.iterrows() if row.iloc[1]==style])
       cls.save_styles(data, prefix=prefix)
 
   @classmethod
@@ -297,8 +297,8 @@ class FileManager:
   @classmethod
   def update_notes_dictionary(cls, data:pd.DataFrame, prefix:str):
     for _, row in data.iterrows():
-      stylename = prefix+"::"+row[1] if prefix!='' else row[1]
-      cls.notes_dictionary[stylename] = row[4]
+      stylename = prefix+"::"+row.iloc[1] if prefix!='' else row.iloc[1]
+      cls.notes_dictionary[stylename] = row.iloc[4]
 
   @classmethod
   def lookup_notes(cls, stylename, prefix):
