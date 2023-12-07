@@ -1,5 +1,7 @@
 # Style Editor
 
+*Note that due to me moving across to ComfyUI this repository is no longer being maintained*
+
 An extension for Automatic1111 to add a Style Editor, which allows you to view and edit saved styles in a spreadsheet-like format. 
 
 See also:
